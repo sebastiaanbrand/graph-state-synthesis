@@ -24,6 +24,7 @@ python scripts/mk_make.py --python
 cd build
 make
 make install
+cd ../..
 ```
 
 4. Install other Python packages:
