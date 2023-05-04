@@ -24,7 +24,7 @@ python scripts/mk_make.py --python
 cd build
 make
 make install
-cd ../..
+cd ../../..
 ```
 
 4. Install other Python packages:
@@ -46,12 +46,12 @@ python generate_benchmarks.py --ghz_k 4 --max_qubits 20 --cz_frac 0.5 --timeout 
 python generate_benchmarks.py --rabbie --timeout 30m
 ```
 
-2. To **run bounded model checking** on these benchmarks run the following on each of the three benchmark folders generated in the previous step. The results are written to `.csv` files in the corresponding benchmark folder.
+2. To **run bounded model checking** on these benchmarks run the following on each of the three benchmark folders generated in the previous step. The results are written to `.csv` files in the corresponding benchmark folder. Depending on hardware, for the first two sets this will take ~30-40h each, while for the third set this will take ~10h. Terminating the script early yields partial results (starting at the lowest number of qubits) which can still be plotted.
 ```shell
 bash benchmarks/<benchmark_folder_name>/run_all_bmc.sh
 ```
 
-3. To **generate the plots** from the benchmark data, run the following on each of the three benchmark folders.
+3. To **generate the plots** from the benchmark data, run the following on each of the three benchmark folders. This generates a number of plots inside the selected benchmark folder.
 ```
 python generate_plots.py benchmarks/<benchmark_folder_name>
 ```
