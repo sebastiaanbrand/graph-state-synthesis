@@ -16,8 +16,9 @@ from matplotlib.ticker import MaxNLocator
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.min_rows', 50)
 
-from graph_states import Graph
+from graph_states import Graph, GraphFactory
 from run_gs_bmc import search_depth
+from gsreachability_using_bmc import GraphStateBMC
 
 
 xlabels = {'nqubits' : 'qubits',
@@ -239,6 +240,51 @@ def plot_bmc_solver_vs(solver1, solver2, df: pd.DataFrame, args):
         fig.savefig(os.path.join(args.folder, f'bmc_solvers.{_format}'))
 
 
+def plot_qubits_vs_cnf_size(args):
+    """
+    Plot the number of qubits against the number of variables and the number 
+    of clauses.
+    """
+    nqubits = np.array(list(range(3, 21)))
+    nvars = []
+    nclauses_d1 = []
+    nclauses_dmax = []
+    for n in nqubits:
+        gs_bmc = GraphStateBMC(Graph(n), Graph(n), 1)
+        bmccnf = gs_bmc.generate_bmc_cnf()
+        nclauses_d1.append(len(bmccnf.clauses))
+        nvars.append(len(bmccnf.variables()))
+        max_depth = search_depth(GraphFactory.get_complete_graph(n),
+                                 GraphFactory.get_empty_graph(n))
+        nclauses_dmax.append(nclauses_d1[-1] * max_depth) # slight approx
+
+    coziness = 3.1 # lower is more cozy
+    relwidth = 1.4 # relative width
+    fig, ax1 = plt.subplots(figsize=(coziness*relwidth, coziness))
+    ax2 = ax1.twinx()
+
+    color = 'tab:blue'
+    ax1.set_xlabel('qubits')
+    ax1.set_ylabel('variables')
+    lns1 = ax1.plot(nqubits, nvars, color=color, label='variables')
+    ax1.set_xticks([4,6,8,10,12,14,16,18,20])
+
+    color = 'tab:orange'
+    ax2.set_ylabel('clauses')
+    lns3 = ax2.plot(nqubits, nclauses_dmax, color=color, label='clauses ($d$ = max)', linestyle='--')
+    
+    # Solution for having two legends
+    leg = lns1 + lns3
+    labs = [l.get_label() for l in leg]
+    ax1.legend(leg, labs, loc=0)
+
+    # Save figure
+    Path(args.folder).mkdir(parents=True, exist_ok=True)
+    plt.tight_layout()
+    for _format in formats:
+        fig.savefig(os.path.join(args.folder, f'cnf_size.{_format}'))
+
+
 def main():
     """
     Generate plots from given folder.
@@ -248,6 +294,7 @@ def main():
     plot_bmc_scatter(df, 'nqubits', args)
     plot_bmc_solver_vs('z3', 'glucose4', df, args)
     plot_bmc_scatter(df, 'edge_prob', args)
+    plot_qubits_vs_cnf_size(args)
 
 
 if __name__ == '__main__':
