@@ -7,6 +7,7 @@ import z3
 from pysat.solvers import Glucose4
 from graph_states import Graph
 from gsreachability_using_bmc import GraphEncoding, GraphStateBMC
+from kissat_wrapper import Kissat
 
 t_enc = 0
 t_solve = 0
@@ -14,7 +15,7 @@ t_solve = 0
 parser = argparse.ArgumentParser()
 parser.add_argument('source_file', metavar='source.cnf')
 parser.add_argument('target_file', metavar='target.cnf')
-parser.add_argument('--solver', default='z3', choices=['z3','glucose4'], action='store')
+parser.add_argument('--solver', default='z3', choices=['z3','glucose4','kissat'], action='store')
 parser.add_argument('--info', default=None, metavar='info.json', action='store')
 parser.add_argument('--statsfile', metavar='out.csv', action='store')
 
@@ -60,6 +61,8 @@ def run_bmc(source: Graph, target: Graph, cz_gates: list, steps: int, _solver: s
             solver.add(clause.to_formula())
     elif _solver == 'glucose4':
         solver = Glucose4(bootstrap_with=bmccnf.to_pysat_clauses())
+    elif _solver == 'kissat':
+        solver = Kissat(cnf=bmccnf)
     t_enc += time.time() - t_start
 
 
@@ -70,9 +73,13 @@ def run_bmc(source: Graph, target: Graph, cz_gates: list, steps: int, _solver: s
     if _solver == 'z3':
         check = solver.check()
         check = check == z3.sat # have check contain True/False instead of sat/unsat
+        t_solve += time.time() - t_start
     elif _solver == 'glucose4':
         check = solver.solve()
-    t_solve += time.time() - t_start
+        t_solve += time.time() - t_start
+    elif _solver == 'kissat':
+        check = solver.solve()
+        t_solve += solver.solve_time
 
     # 3. Write results
     info = f"{source.name}, {source.num_nodes}, {round(t_enc,3)}, {round(t_solve,3)}, {_solver}, {check}, {steps}\n"
@@ -84,11 +91,11 @@ def run_bmc(source: Graph, target: Graph, cz_gates: list, steps: int, _solver: s
     if _solver == 'z3':
         if check:
             print(gs_bmc.retrieve_operations(solver.model(), steps, source.num_nodes))
-        return check
     elif _solver == 'glucose4':
         if check:
             print(solver.get_model())
-        return check
+    # TODO: print model for for kissat solver
+    return check
 
 
 def binary_search(source: Graph, target: Graph, cz_gates: list, solver: str, statsfile: str | None):
