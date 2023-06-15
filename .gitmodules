@@ -1,3 +1,6 @@
 [submodule "extern/z3"]
 	path = extern/z3
 	url = git@github.com:Z3Prover/z3
+[submodule "extern/kissat"]
+	path = extern/kissat
+	url = git@github.com:arminbiere/kissat.git
