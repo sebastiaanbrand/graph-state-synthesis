@@ -22,7 +22,7 @@ parser.add_argument('--cz_frac', metavar='p', action='store', default=0, type=fl
 parser.add_argument('--min_qubits', metavar='n', action='store', default=2, help="Minimum number of qubits (default 2)")
 parser.add_argument('--max_qubits', metavar='n', action='store', default=30, help="Maximum number of qubits (default 30)")
 parser.add_argument('--rseed', metavar='r', action='store', default=42, help="Random seed for generating benchmarks (default 42, 0 sets no random seed)")
-parser.add_argument('--timeout', metavar='t', action='store', default='30m', help="String indicating the timeout per BMC (inc binary search) or PDR run.")
+parser.add_argument('--timeout', metavar='t', action='store', default='30m', help="String indicating the timeout per BMC run (inc binary search).")
 
 
 def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f=None, bench_name=None, id1=1, timeout=''):
@@ -31,8 +31,7 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f=None, bench_
     target_f(nqubits) -> Graph
     """
 
-    bmc_solvers = ['z3', 'glucose4']
-    pdr_options = ['', '--global_rel', '--global_rel --cnf']
+    bmc_solvers = ['z3', 'glucose4', 'kissat']
 
     if bench_name is None:
         folder = f"benchmarks/{datetime.now().strftime('%Y%m%d_%H%M%S')}"
