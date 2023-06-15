@@ -96,6 +96,9 @@ def binary_search(source: Graph, target: Graph, cz_gates: list, solver: str, sta
     Binary seach over the number of operations.
     """
     max_depth = search_depth(source, target)
+    if max_depth <= 0:
+        print(f"Source contains too many isolated nodes, target is unreachable under LC+VD.")
+        return -1
     print(f"Max search depth: {max_depth}")
 
     # 1. Search up for a SAT instance
