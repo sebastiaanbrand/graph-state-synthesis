@@ -186,11 +186,20 @@ class CNF:
     def number_of_clauses(self):
         return len(self.clauses)
 
+    def get_variable_map(self):
+        """
+        Get a map from Variable (with string name) to ints
+        """
+        res = {}
+        for i, v in enumerate(self.variables()):
+            res[v] = i + 1 # (start numbering from 1)
+        return res
+
     def dimacs(self, variable_indices):
         """
         Parameters
         ----------
-        variable_order: dictionary Variable -> int
+        variable_indices: dictionary Variable -> int
 
         """
         #assert(set(variable_indices.keys()) == self.variables())
