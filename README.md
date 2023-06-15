@@ -2,7 +2,7 @@
 Given a source graph, synthesize a desired target graph using only local complementations (LC), corresponding to single-qubit Clifford gates, vertex deletions (VD), corresponding to single-qubit Pauli measurements, and optionally a small amount of edge flips, corresponding the two-qubit CZ gate.
 
 ## Prerequisites
-This project requires `Python 3` to run, and `Make` and a `C/C++` compiler to build [Z3](https://github.com/Z3Prover/z3).
+This project requires `Python 3` to run, and `Make` and a `C/C++` compiler to build [Z3](https://github.com/Z3Prover/z3) and [Kissat](https://github.com/arminbiere/kissat).
 
 
 ## Installation on Linux
@@ -17,7 +17,14 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
-3. Install Z3 and Python bindings:
+3. Build Kissat and test build:
+```shell
+cd extern/kissat
+./configure && make test
+```
+
+
+4. Install Z3 and Python bindings:
 ```shell
 cd extern/z3/
 python scripts/mk_make.py --python
@@ -27,12 +34,12 @@ make install
 cd ../../..
 ```
 
-4. Install other Python packages:
+5. Install other Python packages:
 ```shell
 pip install -r requirements.txt
 ```
 
-5. The installation can be tested with
+6. The installation can be tested with
 ```shell
 pytest
 ```
