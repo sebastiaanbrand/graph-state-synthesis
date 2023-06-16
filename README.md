@@ -21,6 +21,7 @@ source .venv/bin/activate
 ```shell
 cd extern/kissat
 ./configure && make test
+cd ../..
 ```
 
 
