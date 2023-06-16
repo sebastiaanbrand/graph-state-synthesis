@@ -45,4 +45,4 @@ class Kissat:
                 else:
                     print("Error parsing Kissat output")
             elif line.startswith('c process-time'):
-                self.solve_time = float(line.split()[2])
+                self.solve_time = float(line.split()[-2])
