@@ -126,20 +126,9 @@ def binary_search(source: Graph, target: Graph, cz_gates: list, solver: str, sta
         else:
             return -1
 
-    # 3. Search for smallest k which is still SAT
-    lowest_k = k
-    diff = k / 4
-    k = k - round(diff)
-    while round(diff) > 0:
-        if run_bmc(source, target, cz_gates, k, solver, statsfile):
-            lowest_k = k
-            diff = diff / 2
-            k = k - round(diff)
-        else:
-            diff = diff / 2
-            k = k + round(diff)
-
-    return lowest_k
+    # NOTE: no need to search for smallest k because any solution can be turned
+    # into O(1) gates + measurements per qubit.
+    return k
 
 
 def main():
