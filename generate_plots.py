@@ -21,7 +21,7 @@ from run_gs_bmc import search_depth
 from gsreachability_using_bmc import GraphStateBMC
 
 
-xlabels = {'nqubits' : 'qubits',
+xlabels = {'nqubits' : 'number of qubits',
            'edge_prob' : '$p$'}
 leg_names = {'z3' : 'z3',
              'glucose4' : 'glu4'}
@@ -264,7 +264,7 @@ def plot_qubits_vs_cnf_size(args):
     ax2 = ax1.twinx()
 
     color = 'tab:blue'
-    ax1.set_xlabel('qubits')
+    ax1.set_xlabel('number of qubits')
     ax1.set_ylabel('variables')
     lns1 = ax1.plot(nqubits, nvars, color=color, label='variables')
     ax1.set_xticks([4,6,8,10,12,14,16,18,20])
