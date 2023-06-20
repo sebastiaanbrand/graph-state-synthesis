@@ -24,7 +24,8 @@ from gsreachability_using_bmc import GraphStateBMC
 xlabels = {'nqubits' : 'number of qubits',
            'edge_prob' : '$p$'}
 leg_names = {'z3' : 'z3',
-             'glucose4' : 'glu4'}
+             'glucose4' : 'glu4',
+             'kissat' : 'kissat'}
 
 
 parser = argparse.ArgumentParser()
@@ -140,7 +141,7 @@ def plot_bmc_scatter(df: pd.DataFrame, xval, args):
         sub1 = df.loc[df['reachable'] == sat]
 
         # Plot solvers separately
-        for solver, col in zip(['z3', 'glucose4'], ['royalblue', 'darkorange']):
+        for solver, col in zip(['kissat','glucose4'], ['royalblue', 'darkorange']):
             sub2 = sub1.loc[sub1['solver'] == solver]
 
             xs = np.array(sub2[xval])
@@ -194,8 +195,8 @@ def plot_bmc_solver_vs(solver1, solver2, df: pd.DataFrame, args):
     """
     Plot solver1 vs solver2 on bmc data.
     """
-    coziness = 3.4 # lower is more cozy
-    relwidth = 1.4 # relative width
+    coziness = 2.5 # lower is more cozy
+    relwidth = 1.2 # relative width
     fig, ax = plt.subplots(figsize=(coziness*relwidth, coziness))
 
     s1_data = df.loc[df['solver'] == solver1].set_index('name')
@@ -210,7 +211,7 @@ def plot_bmc_solver_vs(solver1, solver2, df: pd.DataFrame, args):
         else:
             sub = joined.loc[(joined['reachable_1'] == False) & (joined['reachable_2'] == False)]
 
-        sub = sub.sort_values('nqubits_1')
+        sub = sub.sort_values('solve_time_1')
         xs = sub['solve_time_1']
         ys = sub['solve_time_2']
 
@@ -226,8 +227,8 @@ def plot_bmc_solver_vs(solver1, solver2, df: pd.DataFrame, args):
     # Axis labels, etc.
     ax = _plot_diagonal_lines(ax, 0, timeout_time, at=[])
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.set_xticks([300*t for t in range(7)])
-    ax.set_yticks([300*t for t in range(7)])
+    ax.set_xticks([500*t for t in range(4)])
+    ax.set_yticks([500*t for t in range(4)])
     ax.set_xlabel(f"{solver1} time (s)")
     ax.set_ylabel(f"{solver2} time (s)")
     
@@ -292,7 +293,7 @@ def main():
     args = parser.parse_args()
     df = process_bmc_data(args.folder)
     plot_bmc_scatter(df, 'nqubits', args)
-    plot_bmc_solver_vs('z3', 'glucose4', df, args)
+    plot_bmc_solver_vs('glucose4', 'kissat', df, args)
     plot_bmc_scatter(df, 'edge_prob', args)
     plot_qubits_vs_cnf_size(args)
 

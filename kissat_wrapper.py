@@ -3,6 +3,7 @@ Simple Python wrapper for Kissat.
 """
 import os
 import subprocess
+import random
 
 class Kissat:
 
@@ -17,7 +18,7 @@ class Kissat:
         """
 
         # 1. write cnf to (temp) DIMCACS cnf file
-        tmp_cnf_file = '_tmp.cnf'
+        tmp_cnf_file = '_tmp_' + str(random.randint(0,2**31)) + '.cnf'
         with open(tmp_cnf_file, 'w') as f:
             f.write(self.cnf.dimacs(self.cnf.get_variable_map()))
 
