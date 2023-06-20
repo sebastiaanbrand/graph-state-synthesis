@@ -31,7 +31,7 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f=None, bench_
     target_f(nqubits) -> Graph
     """
 
-    bmc_solvers = ['z3', 'glucose4', 'kissat']
+    bmc_solvers = ['glucose4', 'kissat']
 
     if bench_name is None:
         folder = f"benchmarks/{datetime.now().strftime('%Y%m%d_%H%M%S')}"
