@@ -1,5 +1,5 @@
 # Graph-state synthesis under LC+VD using BMC
-Given a source graph, synthesize a desired target graph using only local complementations (LC), corresponding to single-qubit Clifford gates, vertex deletions (VD), corresponding to single-qubit Pauli measurements, and optionally a small amount of edge flips, corresponding the two-qubit CZ gate.
+Using bounded model checking (BMC), given a source graph and target graph, find a transformation from source to target using only local complementations (LC) (corresponding to single-qubit Clifford gates), vertex deletions (VD) (corresponding to single-qubit Pauli measurements), and optionally edge flips on a selection of pairs of nodes (corresponding to two-qubit CZ gates).
 
 ## Prerequisites
 This project requires `Python 3` to run, and `Make` and a `C/C++` compiler to build [Z3](https://github.com/Z3Prover/z3) and [Kissat](https://github.com/arminbiere/kissat).
@@ -44,6 +44,39 @@ pip install -r requirements.txt
 ```shell
 pytest
 ```
+
+## Running on individual graphs
+
+For individual source and target graphs, determining reachability using BMC 
+```shell
+python run_gs_bmc.py <source_graph.cnf> <target_graph.cnf>
+```
+
+The folder [`examples/`](examples/) contains the four graphs given in Figure 2 in the [paper](https://arxiv.org/pdf/2309.03593.pdf). These graphs are encoded in [DIMACS CNF format](https://jix.github.io/varisat/manual/0.2.0/formats/dimacs.html), where each edge is associated with a unique variable (these need to be sequential odd integers), and a positive (negative) occurrence of this variable indicates the presence (absence) of this edge in the graph.
+For example:
+
+```shell
+python run_gs_bcm.py examples/graph2.cnf examples/graph4.cnf
+```
+
+By default the `z3` solver is used. The specific solver can be chosen by adding `--solver {z3|kissat|glucose4}`. If the target is found to be reachable, the actual sequence of LCs+VDs can be extracted from the satisfying assignment. However, this is currently only implemented for when the `z3` solver is used.
+
+
+### Including edge flips
+
+Edge flips can be included by specifying a set of pairs of nodes between which these are allowed in a JSON file. 
+For example:
+
+```shell
+python run_gs_bmc.py examples/graph4.cnf examples/graph2.cnf
+```
+yields `Target is unreachable`. However, if we allow the edge flips specified in [`examples/allowed_flips.json`](examples/allowed_flips.json)
+```shell
+python run_gs_bmc.py examples/graph4.cnf examples/graph2.cnf --info examples/allowed_flips.json
+```
+we are able to find a transformation `['LC(0)', 'EF(0,2)']`.
+
+
 
 
 ## Reproducing experiments
