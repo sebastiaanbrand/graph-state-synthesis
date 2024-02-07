@@ -45,7 +45,12 @@ pip install -r requirements.txt
 pytest
 ```
 
-## Running on individual graphs
+
+## Python example
+The file [`example.py`](example.py) contains an example where a source and target graph are constructed, and bounded model checking is used to find a transformation between them.
+
+
+## Command line interface
 
 For individual source and target graphs, determining reachability using BMC 
 ```shell
