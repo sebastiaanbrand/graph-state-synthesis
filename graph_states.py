@@ -58,12 +58,40 @@ class Graph:
                         edges[abs(int(tokens[0]))] = False
 
         # build the graph
+        # num_edges contains the number of _possible_ edges, so
+        # M = N(N-1)/2   <==>  N = 1/2 * (sqrt(8*M + 1) + 1)
         num_nodes = int( 0.5 * (math.sqrt(8*num_edges + 1) + 1) )
         graph = Graph(num_nodes, name=filepath)
         for i, (v, w) in enumerate(Graph.all_possible_edges(num_nodes)):
             var_index = 2 * i + 1
             graph.set_edge(v, w, edges[var_index])
 
+        return graph
+    
+    @staticmethod
+    def from_tgf(filepath: str):
+        """
+        Load a graph from a .tgf file.
+        """
+        max_node = 0
+        edges = set()
+        with open(filepath, 'r', encoding='utf-8') as f:
+            reading_edges = False
+            lines = f.readlines()
+            for line in lines:
+                tokens = line.split()
+                if (reading_edges):
+                    # TGF starts numbering nodes at 1, we start at 0
+                    v = int(tokens[0])-1
+                    w = int(tokens[1])-1
+                    edges.add((v, w))
+                    max_node = max(max_node, v, w)
+                elif tokens[0] == "#":
+                    # read until '#' is a starting character (skip all node names)
+                    reading_edges = True
+        graph = Graph(max_node+1)
+        for v, w in edges:
+            graph.set_edge(v, w, True)
         return graph
 
 
@@ -143,8 +171,25 @@ class Graph:
             ret.append(self.edges[(v, w)])
         return ret
 
+    def to_tgf(self):
+        """
+        Return a string representation of the graph in TGF format.
+        """
+        tgf = "#\n"
+        for v, w in Graph.all_possible_edges(self.num_nodes):
+            if self.edges[(v, w)]:
+                # TGF starts numbering nodes at 1, we start at 0
+                tgf += f"{v+1} {w+1}\n"
+        return tgf
+
     def __str__(self):
         return str(self.edges)
+    
+    def __eq__(self, other):
+        for v, w in Graph.all_possible_edges(self.num_nodes):
+            if self.get_edge(v, w) != other.get_edge(v, w):
+                return False
+        return True
 
 
 

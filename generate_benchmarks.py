@@ -62,7 +62,7 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f=None, bench_
             gs_bmc = GraphStateBMC(source, target, 1, cz_gates)
             t_enc = round(time.time() - t_start, 3)
 
-            # 2. Write CNFs to file
+            # 2a. Write CNFs to file
             src = f"{folder}/{_id}_s.cnf"
             trg = f"{folder}/{_id}_t.cnf"
             rel = f"{folder}/{_id}_r.cnf"
@@ -72,6 +72,14 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f=None, bench_
                 f.write(gs_bmc.dimacs_target())
             with open(rel, 'w', encoding='utf-8') as f:
                 f.write(gs_bmc.dimacs_transition_relation(dummy_clauses=False))
+
+            # 2b. Write graphs as TGF files
+            src = f"{folder}/{_id}_s.tgf"
+            trg = f"{folder}/{_id}_t.tgf"
+            with open(src, 'w', encoding='utf-8') as f:
+                f.write(gs_bmc.source_graph.to_tgf())
+            with open(trg, 'w', encoding='utf-8') as f:
+                f.write(gs_bmc.target_graph.to_tgf())
 
             # 3. Write experiment info
             info = f"{folder}/{_id}_info.json"
