@@ -133,6 +133,14 @@ class Graph:
         return nodes
 
 
+    def get_isolated_nodes(self):
+        """
+        Get all nodes which are not connected to anything.
+        """
+        nodes = set(range(self._num_nodes))
+        return nodes - self.get_non_isolated_nodes()
+
+
     def set_edge(self, v: int, w: int, val=True):
         """
         Set edge (v, w) to val.
