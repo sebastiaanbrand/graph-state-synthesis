@@ -145,9 +145,10 @@ class GSOps:
         return res
 
 
-    def clauses_vec_eq(self, y_val):
+    def clauses_y_eq(self, y_val):
         """
         Returns len(y_vars) clauses which encodes vec(y_vars) == bin(y_val).
+        # TODO: clean code duplication between y and z
         """
         clauses = []
         binary_string = f'{y_val:b}'.zfill(len(self.y_vars))
@@ -158,6 +159,24 @@ class GSOps:
                 clause.add_literal(Literal(variable=self.y_vars[i], negated=True))
             else:
                 clause.add_literal(Literal(variable=self.y_vars[i], negated=False))
+            clauses.append(clause)
+        return clauses
+
+
+    def clauses_z_eq(self, z_val):
+        """
+        Returns len(z_vars) clauses which encodes vec(z_vars) == bin(y_val).
+        # TODO: clean code duplication between y and z
+        """
+        clauses = []
+        binary_string = f'{z_val:b}'.zfill(len(self.z_vars))
+        assert len(binary_string) == len(self.z_vars)
+        for i, b_i in enumerate(binary_string):
+            clause = Clause()
+            if b_i == '0':
+                clause.add_literal(Literal(variable=self.z_vars[i], negated=True))
+            else:
+                clause.add_literal(Literal(variable=self.z_vars[i], negated=False))
             clauses.append(clause)
         return clauses
 
@@ -471,6 +490,17 @@ class GraphEncoding(Graph):
         return res
 
 
+    def clauses_to_force_op(self, op, target=None):
+        """
+        Add clause such that the transition at this time step must be
+        give transition by constraining y and z variables.
+        """
+        clauses = []
+        clauses += self.op_encoder.clauses_z_eq(op)
+        if target is not None:
+            clauses += self.op_encoder.clauses_y_eq(target)
+        return clauses
+
 
 
 class GraphStateBMC:
@@ -500,11 +530,18 @@ class GraphStateBMC:
         self.target = self.sequence[-1]
 
 
-    def generate_bmc_cnf(self, dummy_clauses=False):
+    def generate_bmc_cnf(self, dummy_clauses=False, force_vds_end=False):
         """
         Actually generate the BMC CNF formula.
         """
         res = CNF()
+
+        # Possibly force VDs at the end 
+        # (i.e. structure of Fig.3 https://arxiv.org/pdf/2309.03593)
+        if force_vds_end:
+            # get nodes isolated in target but not in source
+            vd_nodes = list(self.target_graph.get_isolated_nodes() - \
+                            self.source_graph.get_isolated_nodes())
 
         # Source state (sequence[0])
         res.merge(self.source.cnf)
@@ -514,6 +551,19 @@ class GraphStateBMC:
             gv_first = self.sequence[t]
             gv_second = self.sequence[t + 1]
             res.merge(gv_first.get_update_formula_with(other=gv_second, dummy_clauses=dummy_clauses))
+
+            if force_vds_end:
+                if t < self.number_of_steps - len(vd_nodes):
+                    # force operation t to be an LC
+                    clauses = gv_first.clauses_to_force_op(GSOps.LC)
+                    for c in clauses:
+                        res.add_clause(c)
+                else:
+                    # force operation t to be a VD on node k
+                    k = vd_nodes[self.number_of_steps - 1 - t]
+                    clauses = gv_first.clauses_to_force_op(GSOps.VD, k)
+                    for c in clauses:
+                        res.add_clause(c)
 
         # Target state (sequence[k])
         res.merge(self.target.cnf)
@@ -610,18 +660,17 @@ def main():
 
     # run w/o EF
     print("Test without edge creation:")
-    steps = 1
-    nqubits = 3
-    source = GraphFactory.get_complete_graph(nqubits)
-    target = GraphFactory.get_complete_graph(nqubits)
-    target.set_edge(0, 1, False)
-    target.set_edge(1, 2, False)
+    steps = 3
+    nqubits = 4
+    source = GraphFactory.get_star_graph(nqubits)
+    target = GraphFactory.get_empty_graph(nqubits)
+    target.set_edge(1, 2, True)
     print("Source graph: ", source)
     print("Target graph: ", target)
 
     s = z3.Solver()
     gvs = GraphStateBMC(source, target, steps)
-    bmc_cnf = gvs.generate_bmc_cnf(dummy_clauses=False)
+    bmc_cnf = gvs.generate_bmc_cnf(dummy_clauses=False, force_vds_end=True)
     for clause in bmc_cnf.clauses:
         s.add(clause.to_formula())
 

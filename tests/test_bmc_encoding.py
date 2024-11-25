@@ -24,7 +24,7 @@ def test_leq():
             for clause in op_encoder.clauses_vec_leq(b):
                 s.add(clause.to_formula())
             # add constraint vec(y) == k
-            for clause in op_encoder.clauses_vec_eq(k):
+            for clause in op_encoder.clauses_y_eq(k):
                 s.add(clause.to_formula())
             # should be sat iff k <= b
             if k <= b:
