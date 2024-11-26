@@ -63,22 +63,22 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f=None, bench_
             t_enc = round(time.time() - t_start, 3)
 
             # 2a. Write CNFs to file
-            src = f"{folder}/{_id}_s.cnf"
-            trg = f"{folder}/{_id}_t.cnf"
-            rel = f"{folder}/{_id}_r.cnf"
-            with open(src, 'w', encoding='utf-8') as f:
+            src_cnf = f"{folder}/{_id}_s.cnf"
+            trg_cnf = f"{folder}/{_id}_t.cnf"
+            rel_cnf = f"{folder}/{_id}_r.cnf"
+            with open(src_cnf, 'w', encoding='utf-8') as f:
                 f.write(gs_bmc.dimacs_source())
-            with open(trg, 'w', encoding='utf-8') as f:
+            with open(trg_cnf, 'w', encoding='utf-8') as f:
                 f.write(gs_bmc.dimacs_target())
-            with open(rel, 'w', encoding='utf-8') as f:
+            with open(rel_cnf, 'w', encoding='utf-8') as f:
                 f.write(gs_bmc.dimacs_transition_relation(dummy_clauses=False))
 
             # 2b. Write graphs as TGF files
-            src = f"{folder}/{_id}_s.tgf"
-            trg = f"{folder}/{_id}_t.tgf"
-            with open(src, 'w', encoding='utf-8') as f:
+            src_tgf = f"{folder}/{_id}_s.tgf"
+            trg_tgf = f"{folder}/{_id}_t.tgf"
+            with open(src_tgf, 'w', encoding='utf-8') as f:
                 f.write(gs_bmc.source_graph.to_tgf())
-            with open(trg, 'w', encoding='utf-8') as f:
+            with open(trg_tgf, 'w', encoding='utf-8') as f:
                 f.write(gs_bmc.target_graph.to_tgf())
 
             # 3. Write experiment info
@@ -93,7 +93,7 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f=None, bench_
 
             # 4. Add CL command to run this experiment
             for solver in bmc_solvers:
-                bmc_cl.append(f"{timeout} python run_gs_bmc.py {src} {trg} --solver {solver} --info {info} --statsfile {bmc_csv}\n")
+                bmc_cl.append(f"{timeout} python run_gs_bmc.py {src_cnf} {trg_cnf} --solver {solver} --info {info} --statsfile {bmc_csv}\n")
 
     # Write bash script to run bmc experiments
     with open(f"{folder}/run_all_bmc.sh", 'w', encoding='utf-8') as f:
