@@ -16,6 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('source_file', metavar='source.cnf')
 parser.add_argument('target_file', metavar='target.cnf')
 parser.add_argument('--solver', default='z3', choices=['z3','glucose4','kissat'], action='store')
+parser.add_argument('--force_vds_end', default=False, action='store_true')
 parser.add_argument('--info', default=None, metavar='info.json', action='store')
 parser.add_argument('--statsfile', metavar='out.csv', action='store')
 
@@ -41,7 +42,7 @@ def search_depth(source: Graph, target: Graph):
     return depth
 
 
-def run_bmc(source: Graph, target: Graph, cz_gates: list, steps: int, _solver: str, statsfile: str | None):
+def run_bmc(source: Graph, target: Graph, cz_gates: list, steps: int, args):
     """
     Do BMC for given number of steps.
     """
@@ -53,15 +54,15 @@ def run_bmc(source: Graph, target: Graph, cz_gates: list, steps: int, _solver: s
     global t_enc
     t_start = time.time()
     gs_bmc = GraphStateBMC(source, target, steps, cz_gates)
-    bmccnf = gs_bmc.generate_bmc_cnf()
+    bmccnf = gs_bmc.generate_bmc_cnf(force_vds_end=args.force_vds_end)
     # TODO: make SolverWrapper class instead of these if statements
-    if _solver == 'z3':
+    if args.solver == 'z3':
         solver = z3.Solver()
         for clause in bmccnf.clauses:
             solver.add(clause.to_formula())
-    elif _solver == 'glucose4':
+    elif args.solver == 'glucose4':
         solver = Glucose4(bootstrap_with=bmccnf.to_pysat_clauses())
-    elif _solver == 'kissat':
+    elif args.solver == 'kissat':
         solver = Kissat(cnf=bmccnf)
     t_enc += time.time() - t_start
 
@@ -70,35 +71,36 @@ def run_bmc(source: Graph, target: Graph, cz_gates: list, steps: int, _solver: s
     print("\tSolving...")
     global t_solve
     t_start = time.time()
-    if _solver == 'z3':
+    if args.solver == 'z3':
         check = solver.check()
         check = check == z3.sat # have check contain True/False instead of sat/unsat
         t_solve += time.time() - t_start
-    elif _solver == 'glucose4':
+    elif args.solver == 'glucose4':
         check = solver.solve()
         t_solve += time.time() - t_start
-    elif _solver == 'kissat':
+    elif args.solver == 'kissat':
         check = solver.solve()
         t_solve += solver.solve_time
 
     # 3. Write results
-    info = f"{source.name}, {source.num_nodes}, {round(t_enc,3)}, {round(t_solve,3)}, {_solver}, {check}, {steps}\n"
-    if not statsfile is None:
-        with open(statsfile, 'a', encoding='utf-8') as f:
+    encoding = 'vds_end' if args.force_vds_end else 'pos23'
+    info = f"{source.name}, {source.num_nodes}, {round(t_enc,3)}, {round(t_solve,3)}, {encoding}, {args.solver}, {check}, {steps}\n"
+    if not args.statsfile is None:
+        with open(args.statsfile, 'a', encoding='utf-8') as f:
             f.write(info)
 
     # 4. Check solution
-    if _solver == 'z3':
+    if args.solver == 'z3':
         if check:
             print(gs_bmc.retrieve_operations(solver.model(), steps, source.num_nodes))
-    elif _solver == 'glucose4':
+    elif args.solver == 'glucose4':
         if check:
             print(solver.get_model())
     # TODO: print model for for kissat solver
     return check
 
 
-def binary_search(source: Graph, target: Graph, cz_gates: list, solver: str, statsfile: str | None):
+def binary_search(source: Graph, target: Graph, cz_gates: list, args):
     """
     Binary seach over the number of operations.
     """
@@ -111,7 +113,7 @@ def binary_search(source: Graph, target: Graph, cz_gates: list, solver: str, sta
     # 1. Search up for a SAT instance
     k = 1
     while k <= max_depth:
-        if run_bmc(source, target, cz_gates, k, solver, statsfile):
+        if run_bmc(source, target, cz_gates, k, args):
             break
         k = k * 2
 
@@ -121,7 +123,7 @@ def binary_search(source: Graph, target: Graph, cz_gates: list, solver: str, sta
         if k == max_depth * 2:
             return -1
         # otherwise, check k=max_depth
-        elif run_bmc(source, target, cz_gates, max_depth, solver, statsfile):
+        elif run_bmc(source, target, cz_gates, max_depth, args):
             k = max_depth
         else:
             return -1
@@ -141,7 +143,7 @@ def main():
     cz_gates = GraphEncoding.get_cz_from_file(args.info)
     assert source.num_nodes == target.num_nodes
 
-    steps = binary_search(source, target, cz_gates, args.solver, args.statsfile)
+    steps = binary_search(source, target, cz_gates, args)
     if steps == -1:
         print("Target is unreachable\n")
     else:
