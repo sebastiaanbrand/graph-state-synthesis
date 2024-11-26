@@ -21,11 +21,13 @@ parser.add_argument('--ghz_k', metavar='k', action='store', default=0, help="Gen
 parser.add_argument('--cz_frac', metavar='p', action='store', default=0, type=float, help="Allow for CZ gates on a random n * p selection of edges")
 parser.add_argument('--min_qubits', metavar='n', action='store', default=2, help="Minimum number of qubits (default 2)")
 parser.add_argument('--max_qubits', metavar='n', action='store', default=30, help="Maximum number of qubits (default 30)")
+parser.add_argument('--test_vds_end', action='store_true', default=False, help="Include encoding with VDs hardcoded at the end.")
 parser.add_argument('--rseed', metavar='r', action='store', default=42, help="Random seed for generating benchmarks (default 42, 0 sets no random seed)")
 parser.add_argument('--timeout', metavar='t', action='store', default='30m', help="String indicating the timeout per BMC run (inc binary search).")
 
+bmc_cl = "timeout {} python run_gs_bmc.py {} {} --solver {} --info {} --statsfile {}\n"
 
-def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f=None, bench_name=None, id1=1, timeout=''):
+def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f, bench_name, args):
     """
     source_f(nqubits, p_source) -> Graph
     target_f(nqubits) -> Graph
@@ -39,17 +41,14 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f=None, bench_
         folder = f"benchmarks/{bench_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     Path(folder).mkdir(parents=True, exist_ok=False)
 
-    if timeout != '':
-        timeout = f"timeout {timeout}"
-
     # prep results file
     bmc_csv = f"{folder}/bmc_results.csv"
     with open(bmc_csv, 'w', encoding='utf-8') as f:
-        f.write("name, nqubits, enc_time, solve_time, solver, reachable, nsteps\n")
+        f.write("name, nqubits, enc_time, solve_time, encoding, solver, reachable, nsteps\n")
 
-    bmc_cl = []
+    bmc_cls = []
 
-    _id = id1-1
+    _id = 0
     for n in nqubits:
         for p in p_source:
             _id += 1
@@ -93,12 +92,15 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f=None, bench_
 
             # 4. Add CL command to run this experiment
             for solver in bmc_solvers:
-                bmc_cl.append(f"{timeout} python run_gs_bmc.py {src_cnf} {trg_cnf} --solver {solver} --info {info} --statsfile {bmc_csv}\n")
+                bmc_cls.append(bmc_cl.format(args.timeout, src_cnf, trg_cnf, solver, info, bmc_csv))
+                if args.test_vds_end:
+                    _solver = solver + ' --force_vds_end'
+                    bmc_cls.append(bmc_cl.format(args.timeout, src_cnf, trg_cnf, _solver, info, bmc_csv))
 
     # Write bash script to run bmc experiments
     with open(f"{folder}/run_all_bmc.sh", 'w', encoding='utf-8') as f:
         f.write("#!/bin/bash\n\n")
-        f.writelines(bmc_cl)
+        f.writelines(bmc_cls)
 
     # return next free bench id
     return _id
@@ -120,7 +122,7 @@ def main():
                             target_f = lambda n : GraphFactory.get_star_graph(n, 4),
                             cz_f = lambda n : [],
                             bench_name = 'dahlberg2020',
-                            timeout=args.timeout)
+                            args=args)
 
     if args.rabbie:
         generate_benchmarks(nqubits = [14],
@@ -129,7 +131,7 @@ def main():
                             target_f = lambda n : GraphFactory.get_rabbie2022_network('ghz'),
                             bench_name = 'rabbie2022',
                             cz_f = lambda n : [],
-                            timeout=args.timeout)
+                            args=args)
 
     if args.ghz:
         generate_benchmarks(nqubits = range(int(args.min_qubits), int(args.max_qubits)+1),
@@ -138,7 +140,7 @@ def main():
                             target_f = lambda n : GraphFactory.get_star_graph(n),
                             cz_f = lambda n : Graph.random_edges(n, int(n*args.cz_frac)),
                             bench_name = 'ghz',
-                            timeout=args.timeout)
+                            args=args)
 
     if int(args.ghz_k) > 0:
         generate_benchmarks(nqubits = range(int(args.ghz_k), int(args.max_qubits)+1),
@@ -147,7 +149,7 @@ def main():
                             target_f = lambda n : GraphFactory.get_star_graph(n, int(args.ghz_k)),
                             cz_f = lambda n : Graph.random_edges(n, int(n*args.cz_frac)),
                             bench_name = f'ghz_{args.ghz_k}{"_ef" if args.cz_frac != 0 else ""}',
-                            timeout=args.timeout)
+                            args=args)
 
 
 if __name__ == '__main__':
