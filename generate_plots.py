@@ -58,11 +58,11 @@ def get_last_runs(df: pd.DataFrame):
     reach_false = df.loc[df['reachable'] == False]
 
     # 2. get longest solve time from unreachable
-    idx = reach_false.groupby(['name', 'solver'])['solve_time'].transform(max) == reach_false['solve_time']
+    idx = reach_false.groupby(['name', 'solver'])['solve_time'].transform('max') == reach_false['solve_time']
     reach_false = reach_false[idx]
 
     # 3. get shortest solve time from reachable
-    idx = reach_true.groupby(['name', 'solver'])['solve_time'].transform(min) == reach_true['solve_time']
+    idx = reach_true.groupby(['name', 'solver'])['solve_time'].transform('min') == reach_true['solve_time']
     reach_true = reach_true[idx]
 
     # 4. join reachable / unreachable
@@ -91,7 +91,7 @@ def process_bmc_data(folder: str):
     # get first sat or last unsat run for each benchmark
     df = get_last_runs(df)
 
-    df['edge_prob'] = 0 # add edge probs to info (parsed from )
+    df['edge_prob'] = 0.0 # add edge probs to info (parsed from )
 
     # Get meta info + Mark instances which timed-out
     for idx, row in df.iterrows():
@@ -102,10 +102,10 @@ def process_bmc_data(folder: str):
                 df.at[idx, 'solve_time'] = timeout_time
             # parse edge prob if possible
             if info['source'].startswith('ER'):
-                split = re.split(';|\(|\)', info['source']) # good ol' regular expressions
+                split = re.split(r';|\(|\)', info['source']) # good ol' regular expressions
                 df.at[idx, 'edge_prob'] = float(split[2])
             elif info['source'].startswith('RABBIE_RAND'):
-                split = re.split('\(|\)', info['source'])
+                split = re.split(r'\(|\)', info['source'])
                 df.at[idx, 'edge_prob'] = float(split[1])
 
     return df
