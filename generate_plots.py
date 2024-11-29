@@ -3,7 +3,6 @@ Functions to generate plots for the paper.
 """
 import os
 import re
-import math
 import json
 import argparse
 from pathlib import Path
@@ -21,21 +20,28 @@ from run_gs_bmc import search_depth
 from gsreachability_using_bmc import GraphStateBMC
 
 
-xlabels = {'nqubits' : 'number of qubits',
-           'edge_prob' : '$p$'}
-leg_names = {'z3' : 'z3',
-             'glucose4' : 'glu4',
-             'kissat' : 'kissat'}
+COLORS = ['royalblue', 'darkorange', 'forestgreen', 'crimson']
+def plot_names(internal_name):
+    """
+    How to represent internal (df) names in the plots.
+    """
+    names = {'nqubits' : 'number of qubits',
+             'edge_prob' : '$p$'}
+    if internal_name in names:
+        return names[internal_name]
+    else:
+        return internal_name
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('folder')
+parser.add_argument('--plot_versions', action='store_true', default=False, help="Plot versions of the plot without legend/axis etc.")
 
 formats = ['png', 'pdf'] # file formats for plots
-timeout_time = 1800 # visualize values which timed-out as this time
+TIMEOUT_TIME = 1800 # visualize values which timed-out as this time
 
 
-def check_timeout(bench_prefix: str, nsteps: int, nqubits: int, reachable: str):
+def check_timeout(bench_prefix: str, nsteps: int, reachable: str):
     """
     Returns True if binary serach timed-out before reaching max_depth.
     """
@@ -57,11 +63,12 @@ def get_last_runs(df: pd.DataFrame):
     reach_true  = df.loc[df['reachable'] == True]
     reach_false = df.loc[df['reachable'] == False]
 
-    # 2. get longest solve time from unreachable
-    idx = reach_false.groupby(['name', 'solver'])['solve_time'].transform('max') == reach_false['solve_time']
+    # 2. get highest search depth entry from unreachable
+    idx = reach_false.groupby(['name', 'solver'])['nsteps'].transform('max') == reach_false['nsteps']
     reach_false = reach_false[idx]
 
     # 3. get shortest solve time from reachable
+    # (should be only 1 run where reachable is True anyway)
     idx = reach_true.groupby(['name', 'solver'])['solve_time'].transform('min') == reach_true['solve_time']
     reach_true = reach_true[idx]
 
@@ -74,7 +81,7 @@ def get_last_runs(df: pd.DataFrame):
     merged['reachable'] = ~merged['solve_time_t'].isnull()
     merged['solve_time'] = merged[['solve_time_t', 'solve_time_f']].max(axis=1)
     merged['enc_time'] = merged[['enc_time_t', 'enc_time_f']].max(axis=1)
-    merged['nsteps'] = merged[['nsteps_t', 'nsteps_f']].min(axis=1).astype(int)
+    merged['nsteps'] = merged[['nsteps_t', 'nsteps_f']].max(axis=1).astype(int)
 
     merged = merged[['name','nqubits','solver','reachable','solve_time','nsteps']]
 
@@ -88,6 +95,10 @@ def process_bmc_data(folder: str):
     df = pd.read_csv(os.path.join(folder, 'bmc_results.csv'), skipinitialspace=True)
     df = df.rename(columns=lambda x: x.strip())
 
+    # add encoding to solver to avoid having to redo much of the plotting code
+    df['solver'] = df['solver'] + '-' + df['encoding']
+    df = df.drop('encoding', axis=1)
+
     # get first sat or last unsat run for each benchmark
     df = get_last_runs(df)
 
@@ -97,9 +108,9 @@ def process_bmc_data(folder: str):
     for idx, row in df.iterrows():
         with open(row['name'][:-6] + '_info.json', 'r', encoding='utf-8') as f:
             info = json.load(f)
-            timed_out = check_timeout(row['name'][:-6], row['nsteps'], info['nqubits'], row['reachable'])
+            timed_out = check_timeout(row['name'][:-6], row['nsteps'], row['reachable'])
             if timed_out:
-                df.at[idx, 'solve_time'] = timeout_time
+                df.at[idx, 'solve_time'] = TIMEOUT_TIME
             # parse edge prob if possible
             if info['source'].startswith('ER'):
                 split = re.split(r';|\(|\)', info['source']) # good ol' regular expressions
@@ -109,6 +120,17 @@ def process_bmc_data(folder: str):
                 df.at[idx, 'edge_prob'] = float(split[1])
 
     return df
+
+
+def sanity_check(df):
+    """
+    Check if solvers (and encodings) agree on reachability result.
+    """
+    reach_agree = df.groupby(['name', 'nsteps'])['reachable'].nunique().eq(1)
+    if not reach_agree.all():
+        print("ISSUE: solvers disagree on reachability for:")
+        print(reach_agree.loc[reach_agree == False])
+        print()
 
 
 def _plot_diagonal_lines(ax, min_val, max_val, at=[0.1, 10]):
@@ -128,9 +150,9 @@ def _plot_diagonal_lines(ax, min_val, max_val, at=[0.1, 10]):
     return ax
 
 
-def plot_bmc_scatter(df: pd.DataFrame, xval, args):
+def plot_bmc_scatter(df: pd.DataFrame, xval, solvers, leg_names, args):
     """
-    Plot solve time against # qubits for given data.
+    Plot solve time against # qubits or edge probs for given data.
     """
     coziness = 2.5 # lower is more cozy
     relwidth = 1.4 # relative width
@@ -141,7 +163,7 @@ def plot_bmc_scatter(df: pd.DataFrame, xval, args):
         sub1 = df.loc[df['reachable'] == sat]
 
         # Plot solvers separately
-        for solver, col in zip(['kissat','glucose4'], ['royalblue', 'darkorange']):
+        for solver, col, leg_name in zip(solvers, COLORS[:(len(solvers))], leg_names):
             sub2 = sub1.loc[sub1['solver'] == solver]
 
             xs = np.array(sub2[xval])
@@ -152,42 +174,42 @@ def plot_bmc_scatter(df: pd.DataFrame, xval, args):
 
             # NOTE: col must be at least four characters because of np use
             fc_cols = np.array([col for _ in range(len(xs))])
-            fc_cols[ys == timeout_time] = 'none'
-            unreach_lab = 'timeout' if ys[0] == timeout_time else 'unsat'
-            label = f"{'sat' if sat else unreach_lab}, {leg_names[solver]}"
+            fc_cols[ys == TIMEOUT_TIME] = 'none'
+            unreach_lab = 'timeout' if ys[0] == TIMEOUT_TIME else 'unsat'
+            label = f"{'sat' if sat else unreach_lab}, {leg_name}"
             ax.scatter(xs, ys, facecolors=fc_cols, edgecolors=col, marker=marker, label=label)
 
     # Axis labels, etc.
     y_ticks = [300*t for t in range(7)]
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.set_xlabel(xlabels[xval])
-    ax.set_ylim(-timeout_time*0.05, timeout_time*1.05)
+    ax.set_xlabel(plot_names(xval))
+    ax.set_ylim(-TIMEOUT_TIME*0.05, TIMEOUT_TIME*1.05)
     ax.set_yticks(y_ticks)
     ax.set_yticklabels([])
     if xval == 'edge_prob':
         ax.set_xticks([.5, .6, .7, .8, .9])
 
     # Save bare axes
-    Path(args.folder).mkdir(parents=True, exist_ok=True)
-    for _format in formats:
-        fig.savefig(os.path.join(args.folder, f'bmc_scatter_{xval}_bare.{_format}'),
-                    bbox_inches='tight')
+    if args.plot_versions:
+        for _format in formats:
+            fig.savefig(os.path.join(args.folder, f'bmc_scatter_{xval}_{'_'.join(solvers)}_bare.{_format}'),
+                        bbox_inches='tight')
 
     ax.set_yticklabels(y_ticks)
     ax.set_ylabel('time (s)')
 
     # Save figure w/ axis labels but no legend
-    Path(args.folder).mkdir(parents=True, exist_ok=True)
-    for _format in formats:
-        fig.savefig(os.path.join(args.folder, f'bmc_scatter_{xval}_no_leg.{_format}'),
-                    bbox_inches='tight')
+    if args.plot_versions:
+        for _format in formats:
+            fig.savefig(os.path.join(args.folder, f'bmc_scatter_{xval}_{'_'.join(solvers)}_no_leg.{_format}'),
+                        bbox_inches='tight')
 
     ax.legend()
 
     # Save figure
-    Path(args.folder).mkdir(parents=True, exist_ok=True)
-    for _format in formats:
-        fig.savefig(os.path.join(args.folder, f'bmc_scatter_{xval}.{_format}'),
+    _formats = formats if args.plot_versions else ['png']
+    for _format in _formats:
+        fig.savefig(os.path.join(args.folder, f'bmc_scatter_{xval}_{'_'.join(solvers)}.{_format}'),
                     bbox_inches='tight')
 
 
@@ -220,12 +242,12 @@ def plot_bmc_solver_vs(solver1, solver2, df: pd.DataFrame, args):
 
         col = 'royalblue' # NOTE: must be at least four chars because of np use
         fc_cols = np.array([col for _ in range(len(xs))])
-        fc_cols[(ys == timeout_time) | (xs == timeout_time)] = 'none'
+        fc_cols[(ys == TIMEOUT_TIME) | (xs == TIMEOUT_TIME)] = 'none'
         label = 'sat' if sat else 'unsat'
         ax.scatter(xs, ys, facecolors=fc_cols, edgecolors=col, marker=marker, label=label)
 
     # Axis labels, etc.
-    ax = _plot_diagonal_lines(ax, 0, timeout_time, at=[])
+    ax = _plot_diagonal_lines(ax, 0, TIMEOUT_TIME, at=[])
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_xticks([500*t for t in range(4)])
     ax.set_yticks([500*t for t in range(4)])
@@ -236,9 +258,9 @@ def plot_bmc_solver_vs(solver1, solver2, df: pd.DataFrame, args):
     plt.tight_layout()
 
     # Save figure
-    Path(args.folder).mkdir(parents=True, exist_ok=True)
-    for _format in formats:
-        fig.savefig(os.path.join(args.folder, f'bmc_solvers.{_format}'))
+    _formats = formats if args.plot_versions else ['png']
+    for _format in _formats:
+        fig.savefig(os.path.join(args.folder, f'bmc_solvers_{solver1}_{solver2}.{_format}'))
 
 
 def plot_qubits_vs_cnf_size(args):
@@ -280,9 +302,9 @@ def plot_qubits_vs_cnf_size(args):
     ax1.legend(leg, labs, loc=0)
 
     # Save figure
-    Path(args.folder).mkdir(parents=True, exist_ok=True)
     plt.tight_layout()
-    for _format in formats:
+    _formats = formats if args.plot_versions else ['png']
+    for _format in _formats:
         fig.savefig(os.path.join(args.folder, f'cnf_size.{_format}'))
 
 
@@ -292,9 +314,20 @@ def main():
     """
     args = parser.parse_args()
     df = process_bmc_data(args.folder)
-    plot_bmc_scatter(df, 'nqubits', args)
-    plot_bmc_solver_vs('glucose4', 'kissat', df, args)
-    plot_bmc_scatter(df, 'edge_prob', args)
+    sanity_check(df)
+
+    Path(args.folder).mkdir(parents=True, exist_ok=True)
+    if df['nqubits'].nunique() > 1:
+        plot_bmc_scatter(df, 'nqubits', ['kissat-pos23', 'glucose4-pos23'], ['kissat', 'glu4'], args)
+        plot_bmc_scatter(df, 'nqubits', ['kissat-vds_end', 'glucose4-vds_end'], ['kissat', 'glu4'], args)
+        plot_bmc_scatter(df, 'nqubits', ['kissat-pos23','kissat-vds_end'], ['pos23', 'vds-end'], args)
+        plot_bmc_scatter(df, 'nqubits', ['glucose4-pos23','glucose4-vds_end'], ['pos23', 'vds-end'], args)
+    if df['edge_prob'].nunique() > 1:
+        plot_bmc_scatter(df, 'edge_prob', ['kissat-pos23','kissat-vds_end'], ['pos23', 'vds-end'], args)
+        plot_bmc_scatter(df, 'edge_prob', ['glucose4-pos23','glucose4-vds_end'], ['pos23', 'vds-end'], args)
+    plot_bmc_solver_vs('kissat-pos23', 'glucose4-pos23', df, args)
+    plot_bmc_solver_vs('kissat-pos23', 'kissat-vds_end', df, args)
+    plot_bmc_solver_vs('glucose4-pos23', 'glucose4-vds_end', df, args)
     plot_qubits_vs_cnf_size(args)
 
 
