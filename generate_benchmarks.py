@@ -21,7 +21,9 @@ parser.add_argument('--ghz_k', metavar='k', action='store', default=0, help="Gen
 parser.add_argument('--cz_frac', metavar='p', action='store', default=0, type=float, help="Allow for CZ gates on a random n * p selection of edges")
 parser.add_argument('--min_qubits', metavar='n', action='store', default=2, help="Minimum number of qubits (default 2)")
 parser.add_argument('--max_qubits', metavar='n', action='store', default=30, help="Maximum number of qubits (default 30)")
-parser.add_argument('--test_vds_end', action='store_true', default=False, help="Include encoding with VDs hardcoded at the end.")
+parser.add_argument('--encodings', nargs='+', choices=['pos23','vds_end'], default=['pos23','vds_end'], help="Which encoding to benchmark (can be multiple) (default both)")
+parser.add_argument('--solvers', nargs='+', choices=['kissat','glucose4'], default=['kissat','glucose4'], help="Which solver to benchmark (can be multiple) (default both)")
+parser.add_argument('--write_rel', action='store_true', default=False, help="Write the transition relation to a CNF file.")
 parser.add_argument('--rseed', metavar='r', action='store', default=42, help="Random seed for generating benchmarks (default 42, 0 sets no random seed)")
 parser.add_argument('--timeout', metavar='t', action='store', default='30m', help="String indicating the timeout per BMC run (inc binary search).")
 
@@ -32,8 +34,6 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f, bench_name,
     source_f(nqubits, p_source) -> Graph
     target_f(nqubits) -> Graph
     """
-
-    bmc_solvers = ['glucose4', 'kissat']
 
     if bench_name is None:
         folder = f"benchmarks/{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -69,8 +69,9 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f, bench_name,
                 f.write(gs_bmc.dimacs_source())
             with open(trg_cnf, 'w', encoding='utf-8') as f:
                 f.write(gs_bmc.dimacs_target())
-            with open(rel_cnf, 'w', encoding='utf-8') as f:
-                f.write(gs_bmc.dimacs_transition_relation(dummy_clauses=False))
+            if args.write_rel:
+                with open(rel_cnf, 'w', encoding='utf-8') as f:
+                    f.write(gs_bmc.dimacs_transition_relation(dummy_clauses=False))
 
             # 2b. Write graphs as TGF files
             src_tgf = f"{folder}/{_id}_s.tgf"
@@ -91,9 +92,10 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f, bench_name,
                 json.dump(setup, f)
 
             # 4. Add CL command to run this experiment
-            for solver in bmc_solvers:
-                bmc_cls.append(bmc_cl.format(args.timeout, src_cnf, trg_cnf, solver, info, bmc_csv))
-                if args.test_vds_end:
+            for solver in args.solvers:
+                if 'pos23' in args.encodings:
+                    bmc_cls.append(bmc_cl.format(args.timeout, src_cnf, trg_cnf, solver, info, bmc_csv))
+                if 'vds_end' in args.encodings:
                     _solver = solver + ' --force_vds_end'
                     bmc_cls.append(bmc_cl.format(args.timeout, src_cnf, trg_cnf, _solver, info, bmc_csv))
 
