@@ -83,7 +83,7 @@ def get_last_runs(df: pd.DataFrame):
     merged['enc_time'] = merged[['enc_time_t', 'enc_time_f']].max(axis=1)
     merged['nsteps'] = merged[['nsteps_t', 'nsteps_f']].max(axis=1).astype(int)
 
-    merged = merged[['name','nqubits','solver','reachable','solve_time','nsteps']]
+    merged = merged[['name','nqubits','solver','reachable','solve_time', 'enc_time', 'nsteps']]
 
     return merged
 
@@ -150,7 +150,7 @@ def _plot_diagonal_lines(ax, min_val, max_val, at=[0.1, 10]):
     return ax
 
 
-def plot_bmc_scatter(df: pd.DataFrame, xval, solvers, leg_names, args):
+def plot_bmc_scatter(df: pd.DataFrame, xval, solvers, leg_names, args, inc_enc_time):
     """
     Plot solve time against # qubits or edge probs for given data.
     """
@@ -168,6 +168,8 @@ def plot_bmc_scatter(df: pd.DataFrame, xval, solvers, leg_names, args):
 
             xs = np.array(sub2[xval])
             ys = np.array(sub2['solve_time'])
+            if inc_enc_time:
+                ys += np.array(sub2['enc_time'])
 
             if len(xs) == 0:
                 continue
@@ -192,7 +194,7 @@ def plot_bmc_scatter(df: pd.DataFrame, xval, solvers, leg_names, args):
     # Save bare axes
     if args.plot_versions:
         for _format in formats:
-            fig.savefig(os.path.join(args.folder, f'bmc_scatter_{xval}_{'_'.join(solvers)}_bare.{_format}'),
+            fig.savefig(os.path.join(args.folder, f'bmc_scatter_{xval}_{'_'.join(solvers)}_enc{inc_enc_time}_bare.{_format}'),
                         bbox_inches='tight')
 
     ax.set_yticklabels(y_ticks)
@@ -201,7 +203,7 @@ def plot_bmc_scatter(df: pd.DataFrame, xval, solvers, leg_names, args):
     # Save figure w/ axis labels but no legend
     if args.plot_versions:
         for _format in formats:
-            fig.savefig(os.path.join(args.folder, f'bmc_scatter_{xval}_{'_'.join(solvers)}_no_leg.{_format}'),
+            fig.savefig(os.path.join(args.folder, f'bmc_scatter_{xval}_{'_'.join(solvers)}_enc{inc_enc_time}_no_leg.{_format}'),
                         bbox_inches='tight')
 
     ax.legend()
@@ -209,7 +211,7 @@ def plot_bmc_scatter(df: pd.DataFrame, xval, solvers, leg_names, args):
     # Save figure
     _formats = formats if args.plot_versions else ['png']
     for _format in _formats:
-        fig.savefig(os.path.join(args.folder, f'bmc_scatter_{xval}_{'_'.join(solvers)}.{_format}'),
+        fig.savefig(os.path.join(args.folder, f'bmc_scatter_{xval}_{'_'.join(solvers)}_{inc_enc_time}.{_format}'),
                     bbox_inches='tight')
 
 
@@ -317,17 +319,14 @@ def main():
     sanity_check(df)
 
     Path(args.folder).mkdir(parents=True, exist_ok=True)
+    solvers = df['solver'].unique()
     if df['nqubits'].nunique() > 1:
-        plot_bmc_scatter(df, 'nqubits', ['kissat-pos23', 'glucose4-pos23'], ['kissat', 'glu4'], args)
-        plot_bmc_scatter(df, 'nqubits', ['kissat-vds_end', 'glucose4-vds_end'], ['kissat', 'glu4'], args)
-        plot_bmc_scatter(df, 'nqubits', ['kissat-pos23','kissat-vds_end'], ['pos23', 'vds-end'], args)
-        plot_bmc_scatter(df, 'nqubits', ['glucose4-pos23','glucose4-vds_end'], ['pos23', 'vds-end'], args)
+        for solver in solvers:
+            plot_bmc_scatter(df, 'nqubits', [solver], [solver], args, True)
+            plot_bmc_scatter(df, 'nqubits', [solver], [solver], args, False)
     if df['edge_prob'].nunique() > 1:
-        plot_bmc_scatter(df, 'edge_prob', ['kissat-pos23','kissat-vds_end'], ['pos23', 'vds-end'], args)
-        plot_bmc_scatter(df, 'edge_prob', ['glucose4-pos23','glucose4-vds_end'], ['pos23', 'vds-end'], args)
-    plot_bmc_solver_vs('kissat-pos23', 'glucose4-pos23', df, args)
-    plot_bmc_solver_vs('kissat-pos23', 'kissat-vds_end', df, args)
-    plot_bmc_solver_vs('glucose4-pos23', 'glucose4-vds_end', df, args)
+        for solver in solvers:
+            plot_bmc_scatter(df, 'edge_prob', [solver], [''], args)
     plot_qubits_vs_cnf_size(args)
 
 
