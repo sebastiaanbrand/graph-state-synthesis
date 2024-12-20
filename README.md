@@ -2,7 +2,7 @@
 Using bounded model checking (BMC), given a source graph and target graph, find a transformation from source to target using only local complementations (LC) (corresponding to single-qubit Clifford gates), vertex deletions (VD) (corresponding to single-qubit Pauli measurements), and optionally edge flips on a selection of pairs of nodes (corresponding to two-qubit CZ gates).
 
 ## Prerequisites
-This project requires `Python 3` to run, and `Make` and a `C/C++` compiler to build [Z3](https://github.com/Z3Prover/z3) and [Kissat](https://github.com/arminbiere/kissat).
+This project requires `Python 3` to run, and `Make` and a `C/C++` compiler to build [Kissat](https://github.com/arminbiere/kissat).
 
 
 ## Installation on Linux
@@ -25,22 +25,12 @@ cd ../..
 ```
 
 
-4. Install Z3 and Python bindings:
-```shell
-cd extern/z3/
-python scripts/mk_make.py --python
-cd build
-make
-make install
-cd ../../..
-```
-
-5. Install other Python packages:
+4. Install other Python packages:
 ```shell
 pip install -r requirements.txt
 ```
 
-6. The installation can be tested with
+5. The installation can be tested with
 ```shell
 pytest
 ```
@@ -64,7 +54,7 @@ For example:
 python run_gs_bcm.py examples/graph2.cnf examples/graph4.cnf
 ```
 
-By default the `z3` solver is used. The specific solver can be chosen by adding `--solver {z3|kissat|glucose4}`. If the target is found to be reachable, the actual sequence of LCs+VDs can be extracted from the satisfying assignment. However, this is currently only implemented for when the `z3` solver is used.
+By default the kissat solver is used. The specific solver can be chosen by adding `--solver {kissat|glucose4}`. TODO: If the target is found to be reachable, the actual sequence of LCs+VDs can be extracted from the satisfying assignment.
 
 
 ### Including edge flips

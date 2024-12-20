@@ -8,8 +8,7 @@ import networkx as nx
 
 class Graph:
     """
-    Since we would like an explicit label for each edges (e.g. True/False, or
-    z3. Literals) a graph is represented by a map : (v, w) --> val.
+    Graphs are represented by a map : (v, w) --> val.
     """
 
     @staticmethod

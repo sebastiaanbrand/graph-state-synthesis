@@ -4,7 +4,7 @@ Some test cases to check if the Kissat wrapper is working correctly.
 from kissat_wrapper import Kissat
 
 from graph_states import GraphFactory
-from gsreachability_using_bmc import GraphStateBMC, GraphEncoding, GSOps
+from gsreachability_using_bmc import GraphStateBMC
 
 
 def test_lc1():

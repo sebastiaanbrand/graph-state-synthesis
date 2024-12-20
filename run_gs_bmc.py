@@ -3,10 +3,8 @@ CL script which run bounded model checking on the given input graph states.
 """
 import time
 import argparse
-import z3
 from pysat.solvers import Glucose4
 from graph_states import Graph
-from gsreachability_using_bmc import GraphEncoding, GraphStateBMC
 from kissat_wrapper import Kissat
 
 t_enc = 0
@@ -15,7 +13,7 @@ t_solve = 0
 parser = argparse.ArgumentParser()
 parser.add_argument('source_file', metavar='source.cnf')
 parser.add_argument('target_file', metavar='target.cnf')
-parser.add_argument('--solver', default='z3', choices=['z3','glucose4','kissat'], action='store')
+parser.add_argument('--solver', default='kissat', choices=['glucose4','kissat'], action='store')
 parser.add_argument('--force_vds_end', default=False, action='store_true')
 parser.add_argument('--info', default=None, metavar='info.json', action='store')
 parser.add_argument('--statsfile', metavar='out.csv', action='store')
@@ -56,11 +54,7 @@ def run_bmc(source: Graph, target: Graph, cz_gates: list, steps: int, args):
     gs_bmc = GraphStateBMC(source, target, steps, cz_gates)
     bmccnf = gs_bmc.generate_bmc_cnf(force_vds_end=args.force_vds_end)
     # TODO: make SolverWrapper class instead of these if statements
-    if args.solver == 'z3':
-        solver = z3.Solver()
-        for clause in bmccnf.clauses:
-            solver.add(clause.to_formula())
-    elif args.solver == 'glucose4':
+    if args.solver == 'glucose4':
         solver = Glucose4(bootstrap_with=bmccnf.to_pysat_clauses())
     elif args.solver == 'kissat':
         solver = Kissat(cnf=bmccnf)
@@ -71,11 +65,7 @@ def run_bmc(source: Graph, target: Graph, cz_gates: list, steps: int, args):
     print("\tSolving...")
     global t_solve
     t_start = time.time()
-    if args.solver == 'z3':
-        check = solver.check()
-        check = check == z3.sat # have check contain True/False instead of sat/unsat
-        t_solve += time.time() - t_start
-    elif args.solver == 'glucose4':
+    if args.solver == 'glucose4':
         check = solver.solve()
         t_solve += time.time() - t_start
     elif args.solver == 'kissat':
@@ -90,10 +80,7 @@ def run_bmc(source: Graph, target: Graph, cz_gates: list, steps: int, args):
             f.write(info)
 
     # 4. Check solution
-    if args.solver == 'z3':
-        if check:
-            print(gs_bmc.retrieve_operations(solver.model(), steps, source.num_nodes))
-    elif args.solver == 'glucose4':
+    if args.solver == 'glucose4':
         if check:
             print(solver.get_model())
     # TODO: print model for for kissat solver

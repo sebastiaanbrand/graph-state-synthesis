@@ -23,7 +23,7 @@ def main():
     cz_gates = []
 
     # Run binary search over transformation depth (runs new BMC query at each depth)
-    steps = binary_search(source, target, cz_gates, 'z3', None)
+    steps = binary_search(source, target, cz_gates, None)
     if steps == -1:
         print("Target is unreachable\n")
     else:
