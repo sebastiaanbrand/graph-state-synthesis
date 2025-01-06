@@ -8,9 +8,8 @@ import random
 class Kissat:
 
 
-    def __init__(self, cnf):
-        self.cnf = cnf
-
+    def __init__(self, dimacs_string : str):
+        self.dimacs = dimacs_string
 
     def solve(self):
         """
@@ -20,7 +19,7 @@ class Kissat:
         # 1. write cnf to (temp) DIMCACS cnf file
         tmp_cnf_file = '_tmp_' + str(random.randint(0,2**31)) + '.cnf'
         with open(tmp_cnf_file, 'w') as f:
-            f.write(self.cnf.dimacs(self.cnf.get_variable_map()))
+            f.write(self.dimacs)
 
         # 2. run and parse result
         res = subprocess.run(["./extern/kissat/build/kissat", tmp_cnf_file], capture_output=True, text=True)
@@ -36,6 +35,7 @@ class Kissat:
         """
         Get relevant information from kissat console output
         """
+        self.model = []
         lines = output.stdout.split('\n')
         for line in lines:
             if line.startswith('s'):
@@ -45,5 +45,8 @@ class Kissat:
                     self.is_sat = False
                 else:
                     print("Error parsing Kissat output")
+            elif line.startswith('v'):
+                for lit in line[1:].split():
+                    self.model.append(int(lit))
             elif line.startswith('c process-time'):
                 self.solve_time = float(line.split()[-2])
