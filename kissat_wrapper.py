@@ -47,6 +47,7 @@ class Kissat:
                     print("Error parsing Kissat output")
             elif line.startswith('v'):
                 for lit in line[1:].split():
-                    self.model.append(int(lit))
+                    if int(lit) != 0:
+                        self.model.append(int(lit))
             elif line.startswith('c process-time'):
                 self.solve_time = float(line.split()[-2])
