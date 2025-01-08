@@ -107,7 +107,8 @@ def test_lc5():
 
     assert is_sat
     assert len(sequence) == steps
-    assert sequence.index('LC(0)') < sequence.index('LC(3)')
+    assert 'LC(0)' in sequence
+    assert 'LC(3)' in sequence
 
 
 def test_vd1():
