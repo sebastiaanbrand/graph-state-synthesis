@@ -52,6 +52,64 @@ def test_lc2():
     assert sequence[0] == 'LC(0)'
 
 
+def test_lc3():
+    """
+    star_graph(0) --> star_graph(3)
+    """
+    steps = 1
+    nqubits = 5
+
+    source = GraphFactory.get_star_graph(nqubits, center=0)
+    target = GraphFactory.get_star_graph(nqubits, center=3)
+
+    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+
+    assert not is_sat
+
+
+def test_lc4():
+    """
+    star_graph(0) --> star_graph(3)
+    """
+    steps = 2
+    nqubits = 5
+
+    source = GraphFactory.get_star_graph(nqubits, center=0)
+    target = GraphFactory.get_star_graph(nqubits, center=3)
+
+    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+    sequence = encoder.get_operations(s.model, nqubits, steps)
+
+    assert is_sat
+    assert len(sequence) == steps
+    assert sequence[0] == 'LC(0)'
+    assert sequence[1] == 'LC(3)'
+
+
+def test_lc5():
+    """
+    star_graph(0) --> star_graph(3)
+    """
+    steps = 3
+    nqubits = 5
+
+    source = GraphFactory.get_star_graph(nqubits, center=0)
+    target = GraphFactory.get_star_graph(nqubits, center=3)
+
+    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+    sequence = encoder.get_operations(s.model, nqubits, steps)
+
+    assert is_sat
+    assert len(sequence) == steps
+    assert sequence.index('LC(0)') < sequence.index('LC(3)')
+
+
 def test_vd1():
     """
     Simple vertex deletion test.
@@ -94,6 +152,26 @@ def test_vd2():
     assert len(sequence) == steps
     assert 'VD(0)' in sequence
     assert 'VD(3)' in sequence
+
+
+def test_id1():
+    """
+    Test identity operation.
+    """
+    steps = 1
+    nqubits = 5
+
+    source = GraphFactory.get_complete_graph(nqubits)
+    target = GraphFactory.get_complete_graph(nqubits)
+
+    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+    sequence = encoder.get_operations(s.model, nqubits, steps)
+
+    assert is_sat
+    assert len(sequence) == steps
+    assert sequence[0] == 'Id'
 
 
 def test_unsat1():
