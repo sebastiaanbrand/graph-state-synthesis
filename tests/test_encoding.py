@@ -17,10 +17,10 @@ def test_lc1():
     target = GraphFactory.get_complete_graph(nqubits)
     target.set_edge(0, 1, False)
    
-    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
     s = Kissat(dimacs)
     is_sat = s.solve()
-    sequence = encoder.get_operations(s.model, nqubits, steps)
+    sequence = encoder.decode_model(s.model, nqubits, steps)
 
     assert is_sat
     assert len(sequence) == steps
@@ -42,10 +42,10 @@ def test_lc2():
     target.set_edge(0, 2, True)
     target.set_edge(1, 2, True)
    
-    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
     s = Kissat(dimacs)
     is_sat = s.solve()
-    sequence = encoder.get_operations(s.model, nqubits, steps)
+    sequence = encoder.decode_model(s.model, nqubits, steps)
 
     assert is_sat
     assert len(sequence) == steps
@@ -62,7 +62,7 @@ def test_lc3():
     source = GraphFactory.get_star_graph(nqubits, center=0)
     target = GraphFactory.get_star_graph(nqubits, center=3)
 
-    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
     s = Kissat(dimacs)
     is_sat = s.solve()
 
@@ -79,10 +79,10 @@ def test_lc4():
     source = GraphFactory.get_star_graph(nqubits, center=0)
     target = GraphFactory.get_star_graph(nqubits, center=3)
 
-    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
     s = Kissat(dimacs)
     is_sat = s.solve()
-    sequence = encoder.get_operations(s.model, nqubits, steps)
+    sequence = encoder.decode_model(s.model, nqubits, steps)
 
     assert is_sat
     assert len(sequence) == steps
@@ -100,10 +100,10 @@ def test_lc5():
     source = GraphFactory.get_star_graph(nqubits, center=0)
     target = GraphFactory.get_star_graph(nqubits, center=3)
 
-    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
     s = Kissat(dimacs)
     is_sat = s.solve()
-    sequence = encoder.get_operations(s.model, nqubits, steps)
+    sequence = encoder.decode_model(s.model, nqubits, steps)
 
     assert is_sat
     assert len(sequence) == steps
@@ -123,10 +123,10 @@ def test_vd1():
     target.set_edge(0, 1, False)
     target.set_edge(1, 2, False)
 
-    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
     s = Kissat(dimacs)
     is_sat = s.solve()
-    sequence = encoder.get_operations(s.model, nqubits, steps)
+    sequence = encoder.decode_model(s.model, nqubits, steps)
 
     assert is_sat
     assert len(sequence) == steps
@@ -144,10 +144,10 @@ def test_vd2():
     target = GraphFactory.get_empty_graph(nqubits)
     target.set_edge(1, 2, True)
 
-    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
     s = Kissat(dimacs)
     is_sat = s.solve()
-    sequence = encoder.get_operations(s.model, nqubits, steps)
+    sequence = encoder.decode_model(s.model, nqubits, steps)
 
     assert is_sat
     assert len(sequence) == steps
@@ -165,14 +165,59 @@ def test_id1():
     source = GraphFactory.get_complete_graph(nqubits)
     target = GraphFactory.get_complete_graph(nqubits)
 
-    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
     s = Kissat(dimacs)
     is_sat = s.solve()
-    sequence = encoder.get_operations(s.model, nqubits, steps)
+    sequence = encoder.decode_model(s.model, nqubits, steps)
 
     assert is_sat
     assert len(sequence) == steps
     assert sequence[0] == 'Id'
+
+def test_ef1():
+    """
+    Simple EF test.
+    """
+    steps = 1
+    nqubits = 5
+    allowed_efs = [(1,2),(2,3)]
+
+    source = GraphFactory.get_empty_graph(nqubits)
+    target = GraphFactory.get_empty_graph(nqubits)
+    target.set_edge(2, 3, True)
+
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps, allowed_efs)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+    sequence = encoder.decode_model(s.model, nqubits, steps, allowed_efs)
+
+    assert is_sat
+    assert len(sequence) == steps
+    assert sequence[0] == 'EF(2,3)'
+
+
+def test_ef1():
+    """
+    Simple EF test.
+    """
+    steps = 2
+    nqubits = 5
+    allowed_efs = [(1,2),(2,3),(0,4),(1,4),(1,3)]
+
+    source = GraphFactory.get_empty_graph(nqubits)
+    target = GraphFactory.get_empty_graph(nqubits)
+    target.set_edge(1, 2, True)
+    target.set_edge(1, 4, True)
+
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps, allowed_efs)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+    sequence = encoder.decode_model(s.model, nqubits, steps, allowed_efs)
+
+    assert is_sat
+    assert len(sequence) == steps
+    assert 'EF(1,2)' in sequence
+    assert 'EF(1,4)' in sequence
 
 
 def test_unsat1():
@@ -186,7 +231,7 @@ def test_unsat1():
     target = GraphFactory.get_complete_graph(nqubits)
     target.set_edge(0, 1, False)
 
-    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
     s = Kissat(dimacs)
     is_sat = s.solve()
 
@@ -204,7 +249,7 @@ def test_unsat2():
     target = GraphFactory.get_empty_graph(nqubits)
     target.set_edge(1, 2, True)
 
-    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
     s = Kissat(dimacs)
     is_sat = s.solve()
 
@@ -223,7 +268,7 @@ def test_unsat3():
     target.set_edge(0, 1, False)
     target.set_edge(1, 3, False)
 
-    dimacs = encoder.encode_from_strings(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
     s = Kissat(dimacs)
     is_sat = s.solve()
 
