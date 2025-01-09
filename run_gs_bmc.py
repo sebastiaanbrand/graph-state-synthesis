@@ -2,10 +2,13 @@
 CL script which run bounded model checking on the given input graph states.
 """
 import time
+import json
 import argparse
 from pysat.solvers import Glucose4
+from pysat.formula import CNF
 from graph_states import Graph
 from kissat_wrapper import Kissat
+import gs_bmc_encoder as encoder
 
 t_enc = 0
 t_solve = 0
@@ -40,7 +43,7 @@ def search_depth(source: Graph, target: Graph):
     return depth
 
 
-def run_bmc(source: Graph, target: Graph, cz_gates: list, steps: int, args):
+def run_bmc(source: Graph, target: Graph, allowed_efs: list, steps: int, args):
     """
     Do BMC for given number of steps.
     """
@@ -51,13 +54,14 @@ def run_bmc(source: Graph, target: Graph, cz_gates: list, steps: int, args):
     print("\tEncoding...")
     global t_enc
     t_start = time.time()
-    gs_bmc = GraphStateBMC(source, target, steps, cz_gates)
-    bmccnf = gs_bmc.generate_bmc_cnf(force_vds_end=args.force_vds_end)
-    # TODO: make SolverWrapper class instead of these if statements
+    if args.force_vds_end:
+        raise Exception("TODO: add vds_end option to Rust encoder.")
+    num_nodes = max(source.num_nodes, target.num_nodes) # add isolated nodes to make num nodes equal
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), num_nodes, steps, allowed_efs)
     if args.solver == 'glucose4':
-        solver = Glucose4(bootstrap_with=bmccnf.to_pysat_clauses())
+        solver = Glucose4(bootstrap_with=CNF(from_string=dimacs))
     elif args.solver == 'kissat':
-        solver = Kissat(cnf=bmccnf)
+        solver = Kissat(dimacs)
     t_enc += time.time() - t_start
 
 
@@ -66,25 +70,26 @@ def run_bmc(source: Graph, target: Graph, cz_gates: list, steps: int, args):
     global t_solve
     t_start = time.time()
     if args.solver == 'glucose4':
-        check = solver.solve()
+        is_sat = solver.solve()
         t_solve += time.time() - t_start
     elif args.solver == 'kissat':
-        check = solver.solve()
+        is_sat = solver.solve()
         t_solve += solver.solve_time
 
     # 3. Write results
-    encoding = 'vds_end' if args.force_vds_end else 'pos23'
-    info = f"{source.name}, {source.num_nodes}, {round(t_enc,3)}, {round(t_solve,3)}, {encoding}, {args.solver}, {check}, {steps}\n"
+    encoding = 'pos23'
+    if args.force_vds_end:
+        encoding += '-vds_end'
+    info = f"{source.name}, {source.num_nodes}, {round(t_enc,3)}, {round(t_solve,3)}, {encoding}, {args.solver}, {is_sat}, {steps}\n"
     if not args.statsfile is None:
         with open(args.statsfile, 'a', encoding='utf-8') as f:
             f.write(info)
 
-    # 4. Check solution
-    if args.solver == 'glucose4':
-        if check:
-            print(solver.get_model())
-    # TODO: print model for for kissat solver
-    return check
+    # 4. Output solution?
+    if is_sat:
+        sequence = encoder.decode_model(solver.get_model(), source.num_nodes, steps, allowed_efs)
+        print(sequence)
+    return is_sat
 
 
 def binary_search(source: Graph, target: Graph, cz_gates: list, args):
@@ -120,15 +125,25 @@ def binary_search(source: Graph, target: Graph, cz_gates: list, args):
     return k
 
 
+def get_cz_from_file(file: str):
+        """
+        Get allowed CZ gates from info.json file.
+        """
+        if file is None:
+            return []
+        
+        with open(file, 'r', encoding='utf-8') as f:
+            info = json.load(f)
+            return info['cz_gates']
+
 def main():
     """
     Parses args and runs binary search BMC.
     """
     args = parser.parse_args()
-    source = Graph.from_cnf(args.source_file)
-    target = Graph.from_cnf(args.target_file)
-    cz_gates = GraphEncoding.get_cz_from_file(args.info)
-    assert source.num_nodes == target.num_nodes
+    source = Graph.from_tgf(args.source_file)
+    target = Graph.from_tgf(args.target_file)
+    cz_gates = get_cz_from_file(args.info)
 
     steps = binary_search(source, target, cz_gates, args)
     if steps == -1:

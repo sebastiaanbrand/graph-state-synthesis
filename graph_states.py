@@ -32,40 +32,6 @@ class Graph:
         considered equal.
         """
         return min(e1) == min(e2) and max(e1) == max(e2)
-
-    @staticmethod
-    def from_cnf(filepath: str):
-        """
-        Load a graph from a .cnf file. Assumes .cnf file encodes a single graph.
-        """
-        # parse relevant info
-        num_edges = 0
-        edges = {}
-        with open(filepath, 'r', encoding='utf-8') as f:
-            for line in f:
-                tokens = line.split()
-                if tokens[0] == 'p':
-                    assert tokens[1] == 'cnf'
-                    assert tokens[2] == tokens[3] # |vars| = |clauses| for
-                    num_edges = int(tokens[2])
-                elif tokens[0] == 'c':
-                    continue
-                else:
-                    if int(tokens[0]) > 0:
-                        edges[abs(int(tokens[0]))] = True
-                    else:
-                        edges[abs(int(tokens[0]))] = False
-
-        # build the graph
-        # num_edges contains the number of _possible_ edges, so
-        # M = N(N-1)/2   <==>  N = 1/2 * (sqrt(8*M + 1) + 1)
-        num_nodes = int( 0.5 * (math.sqrt(8*num_edges + 1) + 1) )
-        graph = Graph(num_nodes, name=filepath)
-        for i, (v, w) in enumerate(Graph.all_possible_edges(num_nodes)):
-            var_index = 2 * i + 1
-            graph.set_edge(v, w, edges[var_index])
-
-        return graph
     
     @staticmethod
     def from_tgf(filepath: str):
@@ -88,7 +54,7 @@ class Graph:
                 elif tokens[0] == "#":
                     # read until '#' is a starting character (skip all node names)
                     reading_edges = True
-        graph = Graph(max_node+1)
+        graph = Graph(max_node+1, name=filepath)
         for v, w in edges:
             graph.set_edge(v, w, True)
         return graph

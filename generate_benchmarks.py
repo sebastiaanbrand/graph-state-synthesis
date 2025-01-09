@@ -8,10 +8,7 @@ import random
 import argparse
 from pathlib import Path
 from datetime import datetime
-
 from graph_states import Graph, GraphFactory
-from gsreachability_using_bmc import GraphStateBMC
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dahlberg', action='store_true', default=False, help="Generate graphs from Dahlberg2020")
@@ -23,7 +20,6 @@ parser.add_argument('--min_qubits', metavar='n', action='store', default=2, help
 parser.add_argument('--max_qubits', metavar='n', action='store', default=30, help="Maximum number of qubits (default 30)")
 parser.add_argument('--encodings', nargs='+', choices=['pos23','vds_end'], default=['pos23','vds_end'], help="Which encoding to benchmark (can be multiple) (default both)")
 parser.add_argument('--solvers', nargs='+', choices=['kissat','glucose4'], default=['kissat','glucose4'], help="Which solver to benchmark (can be multiple) (default both)")
-parser.add_argument('--write_rel', action='store_true', default=False, help="Write the transition relation to a CNF file.")
 parser.add_argument('--rseed', metavar='r', action='store', default=42, help="Random seed for generating benchmarks (default 42, 0 sets no random seed)")
 parser.add_argument('--timeout', metavar='t', action='store', default='30m', help="String indicating the timeout per BMC run (inc binary search).")
 
@@ -58,46 +54,34 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f, bench_name,
             source = source_f(n, p)
             target = target_f(n)
             cz_gates = cz_f(n)
-            gs_bmc = GraphStateBMC(source, target, 1, cz_gates)
             t_enc = round(time.time() - t_start, 3)
+            assert source.num_nodes == target.num_nodes
 
-            # 2a. Write CNFs to file
-            src_cnf = f"{folder}/{_id}_s.cnf"
-            trg_cnf = f"{folder}/{_id}_t.cnf"
-            rel_cnf = f"{folder}/{_id}_r.cnf"
-            with open(src_cnf, 'w', encoding='utf-8') as f:
-                f.write(gs_bmc.dimacs_source())
-            with open(trg_cnf, 'w', encoding='utf-8') as f:
-                f.write(gs_bmc.dimacs_target())
-            if args.write_rel:
-                with open(rel_cnf, 'w', encoding='utf-8') as f:
-                    f.write(gs_bmc.dimacs_transition_relation(dummy_clauses=False))
-
-            # 2b. Write graphs as TGF files
-            src_tgf = f"{folder}/{_id}_s.tgf"
-            trg_tgf = f"{folder}/{_id}_t.tgf"
+            # 2. Write graphs as TGF files
+            src_tgf = f"{folder}/{_id}_source.tgf"
+            trg_tgf = f"{folder}/{_id}_target.tgf"
             with open(src_tgf, 'w', encoding='utf-8') as f:
-                f.write(gs_bmc.source_graph.to_tgf())
+                f.write(source.to_tgf())
             with open(trg_tgf, 'w', encoding='utf-8') as f:
-                f.write(gs_bmc.target_graph.to_tgf())
+                f.write(target.to_tgf())
 
             # 3. Write experiment info
             info = f"{folder}/{_id}_info.json"
             with open(info, 'w', encoding='utf-8') as f:
                 setup = {'source' : source.name,
-                        'target' : target.name,
-                        'nqubits' : n,
-                        'cz_gates' : cz_gates,
-                        'enc_time' : t_enc}
+                         'target' : target.name,
+                         'nqubits' : n,
+                         'cz_gates' : cz_gates,
+                         'enc_time' : t_enc}
                 json.dump(setup, f)
 
             # 4. Add CL command to run this experiment
             for solver in args.solvers:
                 if 'pos23' in args.encodings:
-                    bmc_cls.append(bmc_cl.format(args.timeout, src_cnf, trg_cnf, solver, info, bmc_csv))
+                    bmc_cls.append(bmc_cl.format(args.timeout, src_tgf, trg_tgf, solver, info, bmc_csv))
                 if 'vds_end' in args.encodings:
                     _solver = solver + ' --force_vds_end'
-                    bmc_cls.append(bmc_cl.format(args.timeout, src_cnf, trg_cnf, _solver, info, bmc_csv))
+                    bmc_cls.append(bmc_cl.format(args.timeout, src_tgf, trg_tgf, _solver, info, bmc_csv))
 
     # Write bash script to run bmc experiments
     with open(f"{folder}/run_all_bmc.sh", 'w', encoding='utf-8') as f:

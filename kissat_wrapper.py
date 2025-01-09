@@ -31,6 +31,13 @@ class Kissat:
         return self.is_sat
 
 
+    def get_model(self):
+        """
+        Return the model if formula was sat.
+        """
+        return self.model
+
+
     def _parse_kissat_output(self, output):
         """
         Get relevant information from kissat console output
