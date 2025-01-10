@@ -220,6 +220,48 @@ def test_ef1():
     assert 'EF(1,4)' in sequence
 
 
+def test_lc_vds1():
+    """
+    Simple tests of LCs + VDs
+    """
+    steps = 2
+    nqubits = 5
+
+    source = GraphFactory.get_complete_graph(nqubits)
+    target = GraphFactory.get_empty_graph(nqubits)
+
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+    sequence = encoder.decode_model(s.model, nqubits, steps)
+
+    assert is_sat
+    assert len(sequence) == steps
+    assert sequence[0].startswith('LC')
+    assert sequence[1].startswith('VD')
+
+
+def test_lc_vds2():
+    """
+    Simple tests of LCs + VDs, with force_vds_end
+    """
+    steps = 5
+    nqubits = 5
+
+    source = GraphFactory.get_complete_graph(nqubits)
+    target = GraphFactory.get_empty_graph(nqubits)
+
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps, force_vds_end=True)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+    sequence = encoder.decode_model(s.model, nqubits, steps)
+
+    assert is_sat
+    assert len(sequence) == steps
+    for op in sequence:
+        assert op.startswith('VD')
+
+
 def test_unsat1():
     """
     Simple unreachability test.
