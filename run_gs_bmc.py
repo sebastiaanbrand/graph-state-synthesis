@@ -21,6 +21,13 @@ parser.add_argument('--force_vds_end', default=False, action='store_true')
 parser.add_argument('--info', default=None, metavar='info.json', action='store')
 parser.add_argument('--statsfile', metavar='out.csv', action='store')
 
+def get_default_args():
+    """
+    Return an argparse Namespace with the default arguments.
+    """
+    args = parser.parse_args(['',''])
+    return args
+
 
 def _get_max_lc(n: int):
     """
@@ -54,14 +61,16 @@ def run_bmc(source: Graph, target: Graph, allowed_efs: list, steps: int, args):
     print("\tEncoding...")
     global t_enc
     t_start = time.time()
-    if args.force_vds_end:
-        raise Exception("TODO: add vds_end option to Rust encoder.")
     num_nodes = max(source.num_nodes, target.num_nodes) # add isolated nodes to make num nodes equal
-    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), num_nodes, steps, allowed_efs)
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), 
+                                num_nodes, steps, 
+                                allowed_efs=allowed_efs, force_vds_end=args.force_vds_end)
     if args.solver == 'glucose4':
         solver = Glucose4(bootstrap_with=CNF(from_string=dimacs))
     elif args.solver == 'kissat':
         solver = Kissat(dimacs)
+    else:
+        raise ValueError(f"Invalid solver '{args.solver}'")
     t_enc += time.time() - t_start
 
 
@@ -77,7 +86,7 @@ def run_bmc(source: Graph, target: Graph, allowed_efs: list, steps: int, args):
         t_solve += solver.solve_time
 
     # 3. Write results
-    encoding = 'pos23'
+    encoding = 'pos23' # TODO: better name + parameterize
     if args.force_vds_end:
         encoding += '-vds_end'
     info = f"{source.name}, {source.num_nodes}, {round(t_enc,3)}, {round(t_solve,3)}, {encoding}, {args.solver}, {is_sat}, {steps}\n"

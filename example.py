@@ -2,7 +2,7 @@
 Example which runs bounded model checking on the two specified graphs.
 """
 from graph_states import GraphFactory
-from run_gs_bmc import binary_search
+from run_gs_bmc import binary_search, get_default_args
 
 def main():
     """
@@ -23,7 +23,8 @@ def main():
     cz_gates = []
 
     # Run binary search over transformation depth (runs new BMC query at each depth)
-    steps = binary_search(source, target, cz_gates, None)
+    args = get_default_args()
+    steps = binary_search(source, target, cz_gates, args)
     if steps == -1:
         print("Target is unreachable\n")
     else:
