@@ -2,13 +2,13 @@
 Using bounded model checking (BMC), given a source graph and target graph, find a transformation from source to target using only local complementations (LC) (corresponding to single-qubit Clifford gates), vertex deletions (VD) (corresponding to single-qubit Pauli measurements), and optionally edge flips on a selection of pairs of nodes (corresponding to two-qubit CZ gates).
 
 ## Prerequisites
-This project requires `Python 3` to run, and `Make` and a `C/C++` compiler to build [Kissat](https://github.com/arminbiere/kissat).
+This project requires `Python 3` to run, and Make and a C/C++ compiler to build [Kissat](https://github.com/arminbiere/kissat), and [Rust](https://www.rust-lang.org/tools/install) to build the [graph-state BMC encoder](https://github.com/sebastiaanbrand/gs-bmc-encoder).
 
 
 ## Installation on Linux
 1. Clone this repo (including submodules):
 ```shell
-git clone --recursive <this repo's url>
+git clone --recurse-submodules <this repo's url>
 ```
 
 2. We recommend running the code and installing dependencies within a [virtual environment](https://docs.python.org/3/tutorial/venv.html). From the root of the repo run:
@@ -17,20 +17,26 @@ python -m venv .venv
 source .venv/bin/activate
 ```
 
-3. Build Kissat and test build:
+3. Install Python dependencies:
+```shell
+pip install -r requirements.txt
+```
+
+4. Build encoder
+```shell
+cd extern/gs-bmc-encoder
+maturin develop
+cd ../..
+```
+
+5. Build Kissat and test build:
 ```shell
 cd extern/kissat
 ./configure && make test
 cd ../..
 ```
 
-
-4. Install other Python packages:
-```shell
-pip install -r requirements.txt
-```
-
-5. The installation can be tested with
+6. The installation can be tested with
 ```shell
 pytest
 ```
@@ -44,17 +50,16 @@ The file [`example.py`](example.py) contains an example where a source and targe
 
 For individual source and target graphs, determining reachability using BMC 
 ```shell
-python run_gs_bmc.py <source_graph.cnf> <target_graph.cnf>
+python run_gs_bmc.py <source_graph.tgf> <target_graph.tgf>
 ```
-
-The folder [`examples/`](examples/) contains the four graphs given in Figure 2 in the [paper](https://arxiv.org/pdf/2309.03593.pdf). These graphs are encoded in [DIMACS CNF format](https://jix.github.io/varisat/manual/0.2.0/formats/dimacs.html), where each edge is associated with a unique variable (these need to be sequential odd integers), and a positive (negative) occurrence of this variable indicates the presence (absence) of this edge in the graph.
+for graphs given in the [Trivial Graph Format](https://en.wikipedia.org/wiki/Trivial_Graph_Format). The directory [`examples/`](examples/) contains the four graphs given in Figure 2 in the [paper](https://arxiv.org/pdf/2309.03593.pdf), in TGF.
 For example:
 
 ```shell
-python run_gs_bcm.py examples/graph2.cnf examples/graph4.cnf
+python run_gs_bcm.py graphs/graph2.tgf graphs/graph4.tgf
 ```
 
-By default the kissat solver is used. The specific solver can be chosen by adding `--solver {kissat|glucose4}`. TODO: If the target is found to be reachable, the actual sequence of LCs+VDs can be extracted from the satisfying assignment.
+By default the kissat solver is used. The specific solver can be chosen by adding `--solver {kissat|glucose4}`.
 
 
 ### Including edge flips
@@ -67,7 +72,7 @@ python run_gs_bmc.py examples/graph4.cnf examples/graph2.cnf
 ```
 yields `Target is unreachable`. However, if we allow the edge flips specified in [`examples/allowed_flips.json`](examples/allowed_flips.json)
 ```shell
-python run_gs_bmc.py examples/graph4.cnf examples/graph2.cnf --info examples/allowed_flips.json
+python run_gs_bmc.py examples/graph4.tgf examples/graph2.tgf --info examples/allowed_flips.json
 ```
 we are able to find a transformation `['LC(0)', 'EF(0,2)']`.
 

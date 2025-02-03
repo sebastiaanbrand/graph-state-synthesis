@@ -143,7 +143,11 @@ def get_cz_from_file(file: str):
         
         with open(file, 'r', encoding='utf-8') as f:
             info = json.load(f)
-            return info['cz_gates']
+            cz_gates = []
+            for node_pair in info['cz_gates']:
+                assert len(node_pair) == 2
+                cz_gates.append(tuple(node_pair))
+            return cz_gates
 
 def main():
     """

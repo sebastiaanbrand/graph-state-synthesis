@@ -38,6 +38,8 @@ class Graph:
         """
         Load a graph from a .tgf file.
         """
+        if not filepath.endswith('.tgf'):
+            raise ValueError(f"Expected TGF file, got {filepath}")
         max_node = 0
         edges = set()
         with open(filepath, 'r', encoding='utf-8') as f:
