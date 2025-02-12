@@ -115,3 +115,67 @@ impl fmt::Display for CNF {
     }
 }
 
+
+/// Returns clauses that encode vars == value.
+pub fn encode_eq(vars: &Vec<u32>, value: u32) -> CNF {
+    //let mut clauses: Vec<Clause> = Vec::with_capacity(vars.len());
+    let mut clauses = CNF::new();
+    let binary_string = format!("{value:0width$b}", width = vars.len());
+    assert!(binary_string.len() == vars.len());
+    for (i, b_i) in binary_string.chars().enumerate() {
+        let mut clause = Clause::new();
+        if b_i == '0' {
+            clause.add_literal(-(vars[i] as i32));
+        }
+        else {
+            clause.add_literal(vars[i] as i32);
+        }
+        clauses.add_clause(clause);
+    }
+    clauses
+}
+
+/// Returns a clause which encodes vars != value.
+/// (see Eq. (12) in https://arxiv.org/pdf/2309.03593)
+pub fn encode_neq(vars: &Vec<u32>, value: u32) -> Clause {
+    let mut clause = Clause::new();
+    let binary_string = format!("{value:0width$b}", width = vars.len());
+    assert!(binary_string.len() == vars.len());
+    for (i, b_i) in binary_string.chars().enumerate() {
+        if b_i == '0' {
+            clause.add_literal(vars[i] as i32);
+        }
+        else {
+            clause.add_literal(-(vars[i] as i32));
+        }
+    }
+    clause
+}
+
+/// Returns clauses that encode vars <= value.
+/// See Eq. (13) in https://arxiv.org/pdf/2309.03593.
+pub fn encode_leq(vars: &Vec<u32>, value: u32) -> CNF {
+    // NOTE: Eq. (13) assumes b_i is the i-th bit from the right (such that the
+    // least significant bit (LSB) is b_0, and that value(b) = SUM_i (b_i * 2^i).
+    // However, here, binary_string is indexed left to right, such that b_0 is
+    // the most significant bit (MSB).
+    let mut clauses = CNF::new();
+    let binary_string = format!("{value:0width$b}", width = vars.len());
+    assert!(binary_string.len() == vars.len());
+    for (i, b_i) in binary_string.chars().enumerate() {
+        if b_i == '0' {
+            let mut clause = Clause::new();
+            clause.add_literal(-(vars[i] as i32));
+            // indices are reversed so j > i becomes j < i
+            for (j, b_j) in binary_string.chars().enumerate() {
+                if j == i { break; } // j < i
+                if b_j == '1' {
+                    clause.add_literal(-(vars[j] as i32));
+                }
+            }
+            clauses.add_clause(clause);
+        }
+    }
+    clauses
+}
+

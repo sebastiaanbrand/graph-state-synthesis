@@ -3,7 +3,7 @@ pub mod cnf;
 pub mod bmc_encoder;
 
 use graph::Graph;
-use bmc_encoder::{BMCEncoder,BMCEncoderAM};
+use bmc_encoder::BMCEncoder;
 use pyo3::prelude::*;
 
 
@@ -14,7 +14,7 @@ fn encode_bmc(source: &str, target: &str, num_nodes:u32, depth: u32, allowed_efs
     let mut target = Graph::from_tgf(target);
     source.extend_nodes_to(num_nodes);
     target.extend_nodes_to(num_nodes);
-    let encoder: BMCEncoderAM = BMCEncoder::new(&source, &target, depth, &allowed_efs);
+    let encoder = BMCEncoder::new(&source, &target, depth, &allowed_efs);
     let mut cnf = encoder.encode_bmc(&source, &target, depth);
     if force_vds_end {
         cnf.add_clauses(encoder.encode_vds_end(&source, &target, depth));
@@ -27,8 +27,8 @@ fn encode_bmc(source: &str, target: &str, num_nodes:u32, depth: u32, allowed_efs
 fn decode_model(model: Vec<i32>, num_nodes:u32, depth: u32, allowed_efs: Vec<(u32,u32)>) -> PyResult<Vec<String>> {
     let source = Graph::new(num_nodes);
     let target = Graph::new(num_nodes);
-    let encoder: BMCEncoderAM = BMCEncoder::new(&source, &target, depth, &allowed_efs);
-    Ok(encoder.get_model_operations(model, depth))
+    let encoder = BMCEncoder::new(&source, &target, depth, &allowed_efs);
+    Ok(encoder.decode_model_operations(model, depth))
 }
 
 /// A Python module implemented in Rust.

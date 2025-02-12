@@ -6,7 +6,7 @@ mod graph;
 mod cnf;
 mod bmc_encoder;
 use graph::Graph;
-use bmc_encoder::{BMCEncoder,BMCEncoderAM};
+use bmc_encoder::BMCEncoder;
 use std::env;
 use std::cmp::max;
 
@@ -25,7 +25,7 @@ fn main() {
         allowed_ef.push((0,1));
         allowed_ef.push((0,2));
         allowed_ef.push((1,2));
-        let encoder: BMCEncoderAM = BMCEncoder::new(&source, &target, depth, &allowed_ef);
+        let encoder = BMCEncoder::new(&source, &target, depth, &allowed_ef);
         println!("{}", source.nodes());
         println!("{}", target.nodes());
         let cnf = encoder.encode_bmc(&source, &target, depth);
