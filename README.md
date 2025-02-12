@@ -2,7 +2,7 @@
 Using bounded model checking (BMC), given a source graph and target graph, find a transformation from source to target using only local complementations (LC) (corresponding to single-qubit Clifford gates), vertex deletions (VD) (corresponding to single-qubit Pauli measurements), and optionally edge flips on a selection of pairs of nodes (corresponding to two-qubit CZ gates).
 
 ## Prerequisites
-This project requires `Python 3` to run, and Make and a C/C++ compiler to build [Kissat](https://github.com/arminbiere/kissat), and [Rust](https://www.rust-lang.org/tools/install) to build the [graph-state BMC encoder](https://github.com/sebastiaanbrand/gs-bmc-encoder).
+This project requires `Python 3` to run, and Make and a C/C++ compiler to build [Kissat](https://github.com/arminbiere/kissat), and [Rust](https://www.rust-lang.org/tools/install) to build the BMC encoder.
 
 
 ## Installation on Linux
@@ -56,10 +56,10 @@ for graphs given in the [Trivial Graph Format](https://en.wikipedia.org/wiki/Tri
 For example:
 
 ```shell
-python run_gs_bcm.py graphs/graph2.tgf graphs/graph4.tgf
+python run_gs_bcm.py examples/graph2.tgf examples/graph4.tgf
 ```
 
-By default the kissat solver is used. The specific solver can be chosen by adding `--solver {kissat|glucose4}`.
+By default the kissat solver is used. The specific solver can be chosen by adding `--solver {kissat|glucose4}`. Additionally, it is possible to only search over solutions where all the vertex deletions happen at the end by adding `--force_vds_end`. This can yield significant improvents in performance.
 
 
 ### Including edge flips
@@ -79,23 +79,8 @@ we are able to find a transformation `['LC(0)', 'EF(0,2)']`.
 
 
 
-## Reproducing experiments
-1. To **generate the benchmarks** used in the paper, run the following. The source and target graphs are stored in DIMACS `.cnf` files. A CNF formula for the transition relation is also stored as as `.cnf` file, but is currently unused.
-```shell
-python generate_benchmarks.py --ghz_k 4 --max_qubits 20 --timeout 30m
-python generate_benchmarks.py --ghz_k 4 --max_qubits 20 --cz_frac 0.5 --timeout 30m
-python generate_benchmarks.py --rabbie --timeout 30m
-```
-
-2. To **run bounded model checking** on these benchmarks run the following on each of the three benchmark folders generated in the previous step. The results are written to `.csv` files in the corresponding benchmark folder. Depending on hardware, for the first two sets this will take ~30-40h each, while for the third set this will take ~10h. Terminating the script early yields partial results (starting at the lowest number of qubits) which can still be plotted.
-```shell
-bash benchmarks/<benchmark_folder_name>/run_all_bmc.sh
-```
-
-3. To **generate the plots** from the benchmark data, run the following on each of the three benchmark folders. This generates a number of plots inside the selected benchmark folder.
-```
-python generate_plots.py benchmarks/<benchmark_folder_name>
-```
+## Paper
+Most of the ideas in this repository are described in the paper "Quantum Graph-State Synthesis with SAT", Brand, S., Coopmans, T., Laarman, A. (2023) [[arXiv](https://doi.org/10.48550/arXiv.2309.03593)], presented at the Pragmatics of SAT 2023 workshop. To reproduce the plots from this paper, please refer to the [sat23-version](https://github.com/sebastiaanbrand/graph-state-synthesis/tree/sat23-version) of the repository.
 
 
 ## Acknowledgements
