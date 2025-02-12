@@ -24,9 +24,9 @@ pip install -r requirements.txt
 
 4. Build encoder
 ```shell
-cd extern/gs-bmc-encoder
-maturin develop
-cd ../..
+cd bmc_encoder
+maturin develop -r
+cd ..
 ```
 
 5. Build Kissat and test build:

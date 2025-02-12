@@ -1,6 +1,3 @@
 [submodule "extern/kissat"]
 	path = extern/kissat
 	url = git@github.com:arminbiere/kissat.git
-[submodule "extern/gs-bmc-encoder"]
-	path = extern/gs-bmc-encoder
-	url = git@github.com:sebastiaanbrand/gs-bmc-encoder.git
