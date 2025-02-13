@@ -18,8 +18,8 @@ parser.add_argument('--ghz_k', metavar='k', action='store', default=0, help="Gen
 parser.add_argument('--cz_frac', metavar='p', action='store', default=0, type=float, help="Allow for CZ gates on a random n * p selection of edges")
 parser.add_argument('--min_qubits', metavar='n', action='store', default=2, help="Minimum number of qubits (default 2)")
 parser.add_argument('--max_qubits', metavar='n', action='store', default=30, help="Maximum number of qubits (default 30)")
-parser.add_argument('--encodings', nargs='+', choices=['pos23','vds_end'], default=['pos23','vds_end'], help="Which encoding to benchmark (can be multiple) (default both)")
-parser.add_argument('--solvers', nargs='+', choices=['kissat','glucose4'], default=['kissat','glucose4'], help="Which solver to benchmark (can be multiple) (default both)")
+parser.add_argument('--encodings', nargs='+', choices=['sat23','vds_end'], default=['sat23'], help="Which encoding(s) to benchmark (can be multiple) (default sat23)")
+parser.add_argument('--solvers', nargs='+', choices=['kissat','glucose4'], default=['kissat'], help="Which solver(s) to benchmark (can be multiple) (default kissat)")
 parser.add_argument('--rseed', metavar='r', action='store', default=42, help="Random seed for generating benchmarks (default 42, 0 sets no random seed)")
 parser.add_argument('--timeout', metavar='t', action='store', default='30m', help="String indicating the timeout per BMC run (inc binary search).")
 
