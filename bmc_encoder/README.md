@@ -1,6 +1,6 @@
 # Graph-State BMC encoder
 
-Encoder for encoding graph-state synthesis problems in CNF (only encoding, no solving), written in Rust. Can be used as a binary tool, or using included Python bindings.
+Encoder for encoding graph-state synthesis problems in CNF (only encoding, no solving), written in Rust. Can be used through Python bindings (see [`scr/lib.rs`](src/lib.rs)).
 
 
 ## Building
