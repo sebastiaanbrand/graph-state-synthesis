@@ -50,11 +50,9 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f, bench_name,
             _id += 1
 
             # 1. Encode BMC problem
-            t_start = time.time()
             source = source_f(n, p)
             target = target_f(n)
             cz_gates = cz_f(n)
-            t_enc = round(time.time() - t_start, 3)
             assert source.num_nodes == target.num_nodes
 
             # 2. Write graphs as TGF files
@@ -71,8 +69,7 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f, bench_name,
                 setup = {'source' : source.name,
                          'target' : target.name,
                          'nqubits' : n,
-                         'cz_gates' : cz_gates,
-                         'enc_time' : t_enc}
+                         'cz_gates' : cz_gates}
                 json.dump(setup, f)
 
             # 4. Add CL command to run this experiment
