@@ -35,7 +35,9 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f, bench_name,
         folder = f"benchmarks/{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     else:
         folder = f"benchmarks/{bench_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    graphs_folder = f"{folder}/graphs"
     Path(folder).mkdir(parents=True, exist_ok=False)
+    Path(graphs_folder).mkdir(parents=True, exist_ok=False)
 
     # prep results file
     bmc_csv = f"{folder}/bmc_results.csv"
@@ -56,15 +58,15 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f, bench_name,
             assert source.num_nodes == target.num_nodes
 
             # 2. Write graphs as TGF files
-            src_tgf = f"{folder}/{_id}_source.tgf"
-            trg_tgf = f"{folder}/{_id}_target.tgf"
+            src_tgf = f"{graphs_folder}/{_id}_source.tgf"
+            trg_tgf = f"{graphs_folder}/{_id}_target.tgf"
             with open(src_tgf, 'w', encoding='utf-8') as f:
                 f.write(source.to_tgf())
             with open(trg_tgf, 'w', encoding='utf-8') as f:
                 f.write(target.to_tgf())
 
             # 3. Write experiment info
-            info = f"{folder}/{_id}_info.json"
+            info = f"{graphs_folder}/{_id}_info.json"
             with open(info, 'w', encoding='utf-8') as f:
                 setup = {'source' : source.name,
                          'target' : target.name,
@@ -74,7 +76,7 @@ def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f, bench_name,
 
             # 4. Add CL command to run this experiment
             for solver in args.solvers:
-                if 'pos23' in args.encodings:
+                if 'sat23' in args.encodings:
                     bmc_cls.append(bmc_cl.format(args.timeout, src_tgf, trg_tgf, solver, info, bmc_csv))
                 if 'vds_end' in args.encodings:
                     _solver = solver + ' --force_vds_end'
