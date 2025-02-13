@@ -17,7 +17,6 @@ pd.set_option('display.min_rows', 50)
 
 from graph_states import Graph, GraphFactory
 from run_gs_bmc import search_depth
-from gsreachability_using_bmc import GraphStateBMC
 
 
 COLORS = ['royalblue', 'darkorange', 'forestgreen', 'crimson']
@@ -47,8 +46,8 @@ def check_timeout(bench_prefix: str, nsteps: int, reachable: str):
     """
     if reachable == True:
         return False
-    source = Graph.from_cnf(bench_prefix + "_s.cnf")
-    target = Graph.from_cnf(bench_prefix + "_t.cnf")
+    source = Graph.from_tgf(bench_prefix + "_source.tgf")
+    target = Graph.from_tgf(bench_prefix + "_target.tgf")
     max_depth = search_depth(source, target)
     is_power_of_2 = (nsteps & (nsteps - 1) == 0)
     return nsteps < max_depth and is_power_of_2
@@ -107,9 +106,9 @@ def process_bmc_data(folder: str):
 
     # Get meta info + Mark instances which timed-out
     for idx, row in df.iterrows():
-        with open(row['name'][:-6] + '_info.json', 'r', encoding='utf-8') as f:
+        with open(row['name'].replace('source.tgf','info.json'), 'r', encoding='utf-8') as f:
             info = json.load(f)
-            timed_out = check_timeout(row['name'][:-6], row['nsteps'], row['reachable'])
+            timed_out = check_timeout(row['name'].replace('_source.tgf',''), row['nsteps'], row['reachable'])
             if timed_out:
                 df.at[idx, 'solve_time'] = TIMEOUT_TIME
             # parse edge prob if possible
@@ -266,11 +265,12 @@ def plot_bmc_solver_vs(solver1, solver2, df: pd.DataFrame, args):
         fig.savefig(os.path.join(args.folder, f'bmc_solvers_{solver1}_{solver2}.{_format}'))
 
 
+"""
+Plot the number of qubits against the number of variables and the number 
+of clauses.
+"""
+"""
 def plot_qubits_vs_cnf_size(args):
-    """
-    Plot the number of qubits against the number of variables and the number 
-    of clauses.
-    """
     nqubits = np.array(list(range(3, 21)))
     nvars = []
     nclauses_d1 = []
@@ -309,7 +309,7 @@ def plot_qubits_vs_cnf_size(args):
     _formats = formats if args.plot_versions else ['png']
     for _format in _formats:
         fig.savefig(os.path.join(args.folder, f'cnf_size.{_format}'))
-
+"""
 
 def main():
     """
@@ -329,7 +329,7 @@ def main():
     if df['edge_prob'].nunique() > 1:
         for solver in solvers:
             plot_bmc_scatter(df, 'edge_prob', [solver], [''], args)
-    plot_qubits_vs_cnf_size(args)
+    #plot_qubits_vs_cnf_size(args)
 
 
 if __name__ == '__main__':
