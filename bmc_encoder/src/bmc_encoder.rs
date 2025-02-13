@@ -294,16 +294,18 @@ impl BMCEncoder {
     /// Force all VDs at the end, on nodes which are isolated in target but not in source.
     pub fn encode_vds_end(&self, source: &Graph, target: &Graph, depth: u32) -> CNF {
         let vd_nodes: Vec<u32> = (&target.get_isolated_nodes() - &source.get_isolated_nodes()).into_iter().collect();
+        let mut vd_idx = 0;
         let mut clauses = CNF::new();
-        for t in 0..depth {
-            if t  < (depth - (vd_nodes.len() as u32)) {
-                // force OP at time t to not be a VD(any)
-                clauses.add_clause(encode_neq(&self.z_vars[t as usize], GSOps::VD as u32));
-            }
-            else {
+        for t in (0..depth).rev() {
+            if vd_idx < vd_nodes.len() {
                 // force OP at time t to be VD(isolated node)
                 clauses.add_clauses(encode_eq(&self.z_vars[t as usize], GSOps::VD as u32));
-                clauses.add_clauses(encode_eq(&self.y_vars[t as usize], vd_nodes[(depth-1-t) as usize]));
+                clauses.add_clauses(encode_eq(&self.y_vars[t as usize], vd_nodes[vd_idx]));
+                vd_idx += 1;
+            }
+            else {
+                // force OP at time t to not be a VD(any)
+                clauses.add_clause(encode_neq(&self.z_vars[t as usize], GSOps::VD as u32));
             }
         }
         clauses
