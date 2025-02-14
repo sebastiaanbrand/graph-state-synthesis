@@ -86,7 +86,7 @@ def run_bmc(source: Graph, target: Graph, allowed_efs: list, steps: int, args):
         t_solve += solver.solve_time
 
     # 3. Write results
-    encoding = 'pos23' # TODO: better name + parameterize
+    encoding = 'sat23' # TODO: don't hardcode
     if args.force_vds_end:
         encoding += '-vds_end'
     info = f"{source.name}, {source.num_nodes}, {round(t_enc,3)}, {round(t_solve,3)}, {encoding}, {args.solver}, {is_sat}, {steps}\n"
