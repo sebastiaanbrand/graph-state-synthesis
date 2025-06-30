@@ -96,7 +96,8 @@ def process_bmc_data(folder: str):
     df = df.rename(columns=lambda x: x.strip())
 
     # add encoding to solver to avoid having to redo much of the plotting code
-    df['solver'] = df['solver'] + '-' + df['encoding']
+    if len(df['encoding'].unique()) > 1:
+        df['solver'] = df['solver'] + '-' + df['encoding']
     df = df.drop('encoding', axis=1)
 
     # get first sat or last unsat run for each benchmark
@@ -321,6 +322,7 @@ def main():
     Path(args.folder).mkdir(parents=True, exist_ok=True)
     solvers = df['solver'].unique()
     if df['nqubits'].nunique() > 1:
+        plot_bmc_scatter(df, 'nqubits', solvers, solvers, args, True)
         for solver in solvers:
             plot_bmc_scatter(df, 'nqubits', [solver], [solver], args, True)
             plot_bmc_scatter(df, 'nqubits', [solver], [solver], args, False)
