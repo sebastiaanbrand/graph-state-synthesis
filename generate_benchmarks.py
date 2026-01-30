@@ -128,7 +128,7 @@ def main():
                             args=args)
 
     if int(args.ghz_k) > 0:
-        generate_benchmarks(nqubits = range(int(args.ghz_k), int(args.max_qubits)+1),
+        generate_benchmarks(nqubits = range(max(int(args.ghz_k), int(args.min_qubits)), int(args.max_qubits)+1),
                             p_source = [0.8, 0.8, 0.8, 0.8, 0.8],
                             source_f = lambda n, p : GraphFactory.get_erdos_renyi_graph(n, p),
                             target_f = lambda n : GraphFactory.get_star_graph(n, int(args.ghz_k)),
