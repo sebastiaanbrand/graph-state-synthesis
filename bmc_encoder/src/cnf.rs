@@ -1,30 +1,29 @@
-use std::collections::{BTreeSet,HashSet};
 use std::cmp::max;
 use std::fmt;
 
 
 #[derive(PartialEq, Eq, Hash, Clone)]
 pub struct Clause {
-    literals: BTreeSet<i32>
+    literals: Vec<i32>
 }
 
 impl Clause {
 
     pub fn new() -> Self {
-        Self { literals: BTreeSet::new() }
+        Self { literals : Vec::new() }
     }
 
     pub fn from_literal(lit: i32) -> Self {
-        Self { literals: BTreeSet::from([lit]) }
+        Self { literals: Vec::from([lit]) }
     }
 
     pub fn add_literal(&mut self, lit: i32) {
-        self.literals.insert(lit);
+        self.literals.push(lit);
     }
 
     pub fn add_literals(&mut self, literals: Vec<i32>) {
         for lit in literals.iter() {
-            self.literals.insert(*lit);
+            self.literals.push(*lit);
         }
     }
 
@@ -32,7 +31,7 @@ impl Clause {
     /// (computes the OR of two clauses)
     pub fn add_from_clause(&mut self, other: Clause) {
         for lit in other.literals.iter() {
-            self.literals.insert(*lit);
+            self.literals.push(*lit);
         }
     }
 
@@ -54,17 +53,17 @@ impl fmt::Display for Clause {
 
 
 pub struct CNF {
-    clauses: HashSet<Clause>
+    clauses: Vec<Clause>
 }
 
 impl CNF {
 
     pub fn new() -> Self {
-        Self { clauses: HashSet::new() }
+        Self { clauses: Vec::new() }
     }
 
     pub fn add_clause(&mut self, clause: Clause) {
-        self.clauses.insert(clause);
+        self.clauses.push(clause);
     }
 
     /// add clauses from other to self
@@ -89,7 +88,7 @@ impl CNF {
         self.clauses.len()
     }
 
-    /// Return a DIMACS format string of CNF formula. 
+    /// Return a DIMACS format string of CNF formula.
     pub fn to_dimacs(&self) -> String {
         let mut dimacs = format!("p cnf {} {}\n", self.nvars(), self.nclauses());
         for clause in self.clauses.iter() {
@@ -178,4 +177,3 @@ pub fn encode_leq(vars: &Vec<u32>, value: u32) -> CNF {
     }
     clauses
 }
-
