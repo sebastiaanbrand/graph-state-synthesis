@@ -13,14 +13,14 @@ use std::cmp::max;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if args.len() >= 3 {
+    if args.len() >= 4 {
 
         let mut source = Graph::from_tgf_file(&args[1]);
         let mut target = Graph::from_tgf_file(&args[2]);
         source.extend_nodes_to(max(source.nodes(), target.nodes()));
         target.extend_nodes_to(max(source.nodes(), target.nodes()));
-        
-        let depth = 3;
+
+        let depth = args[3].parse::<u32>().unwrap();
         let mut allowed_ef = Vec::new();
         allowed_ef.push((0,1));
         allowed_ef.push((0,2));
@@ -32,6 +32,6 @@ fn main() {
         println!("{}", cnf.to_dimacs());
     }
     else {
-        println!("Error: expected arguments source.tfg target.tfg");
+        println!("Error: expected arguments source.tfg target.tfg depth");
     }
 }
