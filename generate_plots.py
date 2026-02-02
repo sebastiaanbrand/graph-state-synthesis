@@ -72,10 +72,10 @@ def get_last_runs(df: pd.DataFrame):
     reach_true = reach_true[idx]
 
     # 4. join reachable / unreachable
-    merged = pd.merge(reach_true, reach_false, 
+    merged = pd.merge(reach_true, reach_false,
                       how='outer',
                       on=['name', 'solver', 'nqubits'],
-                      suffixes=('_t', '_f')).astype({'reachable_t' : bool, 
+                      suffixes=('_t', '_f')).astype({'reachable_t' : bool,
                                                      'reachable_f' : bool})
     merged['reachable'] = ~merged['solve_time_t'].isnull()
     merged['solve_time'] = merged[['solve_time_t', 'solve_time_f']].max(axis=1)
@@ -137,7 +137,7 @@ def _plot_diagonal_lines(ax, min_val, max_val, at=[0.1, 10]):
     """
     Add diagonal lines to ax
     """
-    
+
     # bit of margin for vizualization
     #ax.set_xlim([min_val-0.15*min_val, max_val+0.15*max_val])
     #ax.set_ylim([min_val-0.15*min_val, max_val+0.15*max_val])
@@ -225,7 +225,7 @@ def plot_bmc_solver_vs(solver1, solver2, df: pd.DataFrame, args):
 
     s1_data = df.loc[df['solver'] == solver1].set_index('name')
     s2_data = df.loc[df['solver'] == solver2].set_index('name')
-    
+
     joined = s1_data.join(s2_data, lsuffix='_1', rsuffix='_2')
 
     # Plot sat and unsat separately
@@ -255,7 +255,7 @@ def plot_bmc_solver_vs(solver1, solver2, df: pd.DataFrame, args):
     ax.set_yticks([500*t for t in range(4)])
     ax.set_xlabel(f"{solver1} time (s)")
     ax.set_ylabel(f"{solver2} time (s)")
-    
+
     ax.legend()
     plt.tight_layout()
 
@@ -266,7 +266,7 @@ def plot_bmc_solver_vs(solver1, solver2, df: pd.DataFrame, args):
 
 
 """
-Plot the number of qubits against the number of variables and the number 
+Plot the number of qubits against the number of variables and the number
 of clauses.
 """
 """
@@ -298,7 +298,7 @@ def plot_qubits_vs_cnf_size(args):
     color = 'tab:orange'
     ax2.set_ylabel('clauses')
     lns3 = ax2.plot(nqubits, nclauses_dmax, color=color, label='clauses ($d$ = max)', linestyle='--')
-    
+
     # Solution for having two legends
     leg = lns1 + lns3
     labs = [l.get_label() for l in leg]

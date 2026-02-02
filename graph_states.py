@@ -1,7 +1,6 @@
 """
 Some code for generating graph states.
 """
-import math
 import random
 import itertools
 import networkx as nx
@@ -28,11 +27,11 @@ class Graph:
     @staticmethod
     def edge_equal(e1, e2):
         """
-        Check if two (undirected) edges are equal. (a,b) and (b,c) are 
+        Check if two (undirected) edges are equal. (a,b) and (b,c) are
         considered equal.
         """
         return min(e1) == min(e2) and max(e1) == max(e2)
-    
+
     @staticmethod
     def from_tgf(filepath: str):
         """
@@ -159,7 +158,7 @@ class Graph:
 
     def __str__(self):
         return str(self.edges)
-    
+
     def __eq__(self, other):
         for v, w in Graph.all_possible_edges(self.num_nodes):
             if self.get_edge(v, w) != other.get_edge(v, w):
@@ -265,8 +264,8 @@ class GraphFactory:
         """
         num_nodes = 14
         names = {'Almere' : 0, 'Amsterdam_2' : 1, 'Arnhem' : 2, 'Delft_1' : 3,
-                 'Dwingeloo' : 4, 'Eindhoven_1' : 5, 'Enschede_2' : 6 , 
-                 'Groningen_1' : 7, 'Maastricht' : 8, 'Meppel' : 9, 
+                 'Dwingeloo' : 4, 'Eindhoven_1' : 5, 'Enschede_2' : 6 ,
+                 'Groningen_1' : 7, 'Maastricht' : 8, 'Meppel' : 9,
                  'Nieuwegein' : 10, 'Venlo' : 11, 'Zwolle_1' : 12,
                  'Zwolle_2' : 13}
         names_inv = {val : key for key, val in names.items()}

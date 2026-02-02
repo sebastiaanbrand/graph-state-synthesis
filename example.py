@@ -1,5 +1,5 @@
 """
-Example which runs bounded model checking on the two specified graphs.
+Example that runs bounded model checking on the two specified graphs.
 """
 from graph_states import GraphFactory
 from run_gs_bmc import binary_search, get_default_args

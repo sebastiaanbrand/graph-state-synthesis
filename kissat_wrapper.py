@@ -11,6 +11,7 @@ class Kissat:
     def __init__(self, dimacs_string : str):
         self.dimacs = dimacs_string
 
+
     def solve(self):
         """
         Solve the CNF in self.cnf
@@ -23,7 +24,7 @@ class Kissat:
 
         # 2. run and parse result
         res = subprocess.run(["./extern/kissat/build/kissat", tmp_cnf_file], capture_output=True, text=True)
-        self._parse_kissat_output(res)        
+        self._parse_kissat_output(res)
 
         # 3. remove temp cnf file
         os.remove(tmp_cnf_file)
@@ -51,7 +52,7 @@ class Kissat:
                 elif line[:5] == 's UNS':
                     self.is_sat = False
                 else:
-                    print("Error parsing Kissat output")
+                    raise Exception("Error parsing Kissat output")
             elif line.startswith('v'):
                 for lit in line[1:].split():
                     if int(lit) != 0:

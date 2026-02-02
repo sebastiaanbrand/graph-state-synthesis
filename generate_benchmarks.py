@@ -2,13 +2,13 @@
 Code to generate graph state reachability benchmarks which can be run with both
 bounded model checking and with BDDs.
 """
-import time
 import json
 import random
 import argparse
 from pathlib import Path
 from datetime import datetime
 from graph_states import Graph, GraphFactory
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--dahlberg', action='store_true', default=False, help="Generate graphs from Dahlberg2020")
@@ -23,7 +23,9 @@ parser.add_argument('--solvers', nargs='+', choices=['kissat','glucose4'], defau
 parser.add_argument('--rseed', metavar='r', action='store', default=42, help="Random seed for generating benchmarks (default 42, 0 sets no random seed)")
 parser.add_argument('--timeout', metavar='t', action='store', default='30m', help="String indicating the timeout per BMC run (inc binary search).")
 
+
 bmc_cl = "timeout {} python run_gs_bmc.py {} {} --solver {} --info {} --statsfile {}\n"
+
 
 def generate_benchmarks(nqubits, p_source, source_f, target_f, cz_f, bench_name, args):
     """

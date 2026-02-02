@@ -48,7 +48,7 @@ The file [`example.py`](example.py) contains an example where a source and targe
 
 ## Command line interface
 
-For individual source and target graphs, determining reachability using BMC 
+For individual source and target graphs, determining reachability using BMC
 ```shell
 python run_gs_bmc.py <source_graph.tgf> <target_graph.tgf>
 ```
@@ -64,7 +64,7 @@ By default the kissat solver is used. The specific solver can be chosen by addin
 
 ### Including edge flips
 
-Edge flips can be included by specifying a set of pairs of nodes between which these are allowed in a JSON file. 
+Edge flips can be included by specifying a set of pairs of nodes between which these are allowed in a JSON file.
 For example:
 
 ```shell
