@@ -16,7 +16,7 @@ def test_lc1():
     source = GraphFactory.get_complete_graph(nqubits)
     target = GraphFactory.get_complete_graph(nqubits)
     target.set_edge(0, 1, False)
-   
+
     dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
     s = Kissat(dimacs)
     is_sat = s.solve()
@@ -41,7 +41,7 @@ def test_lc2():
     target.set_edge(0, 1, True)
     target.set_edge(0, 2, True)
     target.set_edge(1, 2, True)
-   
+
     dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
     s = Kissat(dimacs)
     is_sat = s.solve()
@@ -220,7 +220,61 @@ def test_ef1():
     assert 'EF(1,4)' in sequence
 
 
-def test_lc_vds1():
+def test_ef_lc1():
+    """
+    Simple EF + LC test
+    """
+    steps = 8
+    nqubits = 7
+    allowed_efs = [(0,1),(0,2),(0,3),(0,4),(0,5),(0,6)]
+
+    source = GraphFactory.get_empty_graph(nqubits)
+    target = GraphFactory.get_complete_graph(nqubits)
+
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps, allowed_efs)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+    sequence = encoder.decode_model(s.model, nqubits, steps, allowed_efs)
+
+    assert is_sat
+    assert len(sequence) == steps
+    assert 'EF(0,1)' in sequence
+    assert 'EF(0,2)' in sequence
+    assert 'EF(0,3)' in sequence
+    assert 'EF(0,4)' in sequence
+    assert 'EF(0,5)' in sequence
+    assert 'EF(0,6)' in sequence
+    assert sequence[-1] == 'LC(0)'
+
+
+def test_ef_lc2():
+    """
+    Simple EF + LC test
+    """
+    steps = 8
+    nqubits = 7
+    allowed_efs = [(0,3),(1,3),(2,3),(3,4),(3,5),(3,6)]
+
+    source = GraphFactory.get_empty_graph(nqubits)
+    target = GraphFactory.get_complete_graph(nqubits)
+
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps, allowed_efs)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+    sequence = encoder.decode_model(s.model, nqubits, steps, allowed_efs)
+
+    assert is_sat
+    assert len(sequence) == steps
+    assert 'EF(0,3)' in sequence
+    assert 'EF(1,3)' in sequence
+    assert 'EF(2,3)' in sequence
+    assert 'EF(3,4)' in sequence
+    assert 'EF(3,5)' in sequence
+    assert 'EF(3,6)' in sequence
+    assert sequence[-1] == 'LC(3)'
+
+
+def test_lc_vd1():
     """
     Simple tests of LCs + VDs
     """
@@ -241,7 +295,7 @@ def test_lc_vds1():
     assert sequence[1].startswith('VD')
 
 
-def test_lc_vds2():
+def test_lc_vd2():
     """
     Simple tests of LCs + VDs, with force_vds_end
     """
@@ -311,6 +365,24 @@ def test_unsat3():
     target.set_edge(1, 3, False)
 
     dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+
+    assert not is_sat
+
+
+def test_unsat4():
+    """
+    Should be unreachable with 6 steps.
+    """
+    steps = 6
+    nqubits = 7
+    allowed_efs = [(0,3),(1,3),(2,3),(3,4),(3,5),(3,6)]
+
+    source = GraphFactory.get_empty_graph(nqubits)
+    target = GraphFactory.get_star_graph(nqubits, center=0)
+
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps, allowed_efs)
     s = Kissat(dimacs)
     is_sat = s.solve()
 
