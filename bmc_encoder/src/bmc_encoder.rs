@@ -12,7 +12,7 @@ pub enum GSOps {
 
 
 /// BMC encoder based on the adjacency matrix, using one var for each pair of nodes.
-pub struct BMCEncoder { 
+pub struct BMCEncoder {
     x_vars: Vec<Vec<Vec<u32>>>, // vars[t][u][v] -> edge (u,v) at time t
     y_vars: Vec<Vec<u32>>,      // vars[t] -> \vec y at time t
     w_vars: Vec<Vec<u32>>,      // vars[t][i] -> EF allowed_efs[i] at time t
@@ -36,14 +36,14 @@ impl BMCEncoder {
         let n_opvars = ((GSOps::NumOps as u32) as f64).log2().ceil() as usize;
         let mut n_efvars = 0;
         if allowed_efs.len() > 0 {
-            n_efvars = (allowed_efs.len() as f64).log2().ceil() as usize;
+            n_efvars = ((allowed_efs.len() as f64).log2().floor() + 1.0) as usize;
         }
 
         // init vars
         let mut x_vars = vec![vec![vec![0;n]; n]; m+1];
         let mut y_vars = vec![vec![0;n]; m];
         let mut w_vars = vec![vec![0;n_efvars]; m];
-        let mut z_vars = vec![vec![0;n_opvars]; m]; 
+        let mut z_vars = vec![vec![0;n_opvars]; m];
         let mut var = 1;
         for t in 0..m {
             for u in 0..n {
@@ -73,7 +73,7 @@ impl BMCEncoder {
             }
         }
 
-        Self { x_vars, y_vars, w_vars, z_vars, nvars: var-1, 
+        Self { x_vars, y_vars, w_vars, z_vars, nvars: var-1,
                n: n as u32, depth, allowed_efs: allowed_efs.clone() }
     }
 
@@ -107,7 +107,7 @@ impl BMCEncoder {
 
 
     fn encode_transition(&self, t: u32) -> CNF {
-        
+
         let mut res = CNF::new();
 
         // forall k : (y = k  ^ z = GSOps::LC) --> LC(k)
@@ -243,7 +243,7 @@ impl BMCEncoder {
                         clause_a.add_literal(self.edge_var(t+1, u, v));
                         clause_a.add_literal(-self.edge_var(t, u, v));
                         res.add_clause(clause_a);
-        
+
                         let mut clause_b = Clause::new();
                         clause_b.add_from_clause(encode_neq(&self.w_vars[t as usize], i as u32));
                         clause_b.add_from_clause(encode_neq(&self.z_vars[t as usize], GSOps::EF as u32));
@@ -352,7 +352,7 @@ impl BMCEncoder {
                     ef_idx += 1 << (w_size - 1 - i);
                 }
             }
-            
+
             // format result
             if op == (GSOps::LC as i32) {
                 interp.push(format!("LC({})", node));
@@ -387,7 +387,7 @@ impl BMCEncoder {
         for t in 0..self.depth {
             for u in 0..self.n {
                 for v in u+1..self.n {
-                    println!("x_{t}_{u}_{v} = {}", 
+                    println!("x_{t}_{u}_{v} = {}",
                              self.x_vars[t as usize][u as usize][v as usize])
                 }
             }
@@ -404,11 +404,10 @@ impl BMCEncoder {
         let t = self.depth;
         for u in 0..self.n {
             for v in u+1..self.n {
-                println!("x_{t}_{u}_{v} = {}", 
+                println!("x_{t}_{u}_{v} = {}",
                          self.x_vars[t as usize][u as usize][v as usize])
             }
         }
     }
 
 }
-

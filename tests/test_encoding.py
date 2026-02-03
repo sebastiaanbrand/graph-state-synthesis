@@ -220,6 +220,29 @@ def test_ef1():
     assert 'EF(1,4)' in sequence
 
 
+
+def test_ef2():
+    """
+    Test only two nodes.
+    """
+    steps = 1
+    nqubits = 2
+    allowed_efs = [(0,1)]
+    print(allowed_efs)
+
+    source = GraphFactory.get_empty_graph(nqubits)
+    target = GraphFactory.get_complete_graph(nqubits)
+
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps, allowed_efs)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+    sequence = encoder.decode_model(s.model, nqubits, steps, allowed_efs)
+
+    assert is_sat
+    assert len(sequence) == steps
+    assert sequence[0] == 'EF(0,1)'
+
+
 def test_ef_lc1():
     """
     Simple EF + LC test
