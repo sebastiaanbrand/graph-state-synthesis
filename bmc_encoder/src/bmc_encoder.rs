@@ -80,37 +80,59 @@ impl BMCEncoder {
 
     pub fn encode_bmc(&self, source: &Graph, target: &Graph, depth: u32) -> CNF {
         let mut cnf = CNF::new();
-        cnf.add_clauses(self.encode_graph(source, 0));
+        self.encode_graph(source, 0, &mut cnf);
         for t in 0..depth {
-            cnf.add_clauses(self.encode_transition(t));
+            self.encode_transition(t, &mut cnf);
         }
-        cnf.add_clauses(self.encode_graph(target, depth));
+        self.encode_graph(target, depth, &mut cnf);
         cnf
     }
 
 
-    fn encode_graph(&self, g: &Graph, t: u32) -> CNF {
-        let mut res = CNF::new();
+    fn encode_graph(&self, g: &Graph, t: u32, cnf: &mut CNF) {
         for u in 0..g.nodes() {
             for v in u+1..g.nodes() {
                 let lit = self.edge_var(t, u, v);
                 if g.contains(u, v) {
-                    res.add_clause(Clause::from_literal(lit))
+                    cnf.add_clause(Clause::from_literal(lit))
                 }
                 else {
-                    res.add_clause(Clause::from_literal(-lit))
+                    cnf.add_clause(Clause::from_literal(-lit))
                 }
             }
         }
-        res
     }
 
 
-    fn encode_transition(&self, t: u32) -> CNF {
+    fn encode_transition(&self, t: u32, cnf: &mut CNF) {
 
-        let mut res = CNF::new();
+        // add transitions
+        self.encode_lcs(t, cnf);
+        self.encode_vds(t, cnf);
+        self.encode_efs(t, cnf);
+        self.encode_id(t, cnf);
 
-        // forall k : (y = k  ^ z = GSOps::LC) --> LC(k)
+        // \vec y <= |V| - 1
+        cnf.add_clauses(encode_leq(&self.y_vars[t as usize], self.n - 1));
+
+        // \vec z < |ops| - 1
+        cnf.add_clauses(encode_leq(&self.z_vars[t as usize], GSOps::NumOps as u32 - 1));
+
+        // If no EF, \vec z != GSOps::EF
+        if self.allowed_efs.len() == 0 {
+            cnf.add_clause(encode_neq(&self.z_vars[t as usize], GSOps::EF as u32));
+        }
+
+        // If EFs, \vec ef <= |allowed_ef| - 1
+        if self.allowed_efs.len() > 0 {
+            cnf.add_clauses(encode_leq(&self.w_vars[t as usize], self.allowed_efs.len() as u32 - 1));
+        }
+
+    }
+
+
+    fn encode_lcs(&self, t: u32, cnf: &mut CNF) {
+        // forall k : (y = k ^ z = GSOps::LC) --> LC(k)
         // (see Eq. (4, 14) in https://arxiv.org/pdf/2309.03593)
         for k in 0..self.n {
             for u in 0..self.n {
@@ -123,7 +145,7 @@ impl BMCEncoder {
                         clause_a.add_literal(-self.edge_var(t, v, k));
                         clause_a.add_literal(self.edge_var(t+1, u, v));
                         clause_a.add_literal(self.edge_var(t, u, v));
-                        res.add_clause(clause_a);
+                        cnf.add_clause(clause_a);
 
                         let mut clause_b = Clause::new();
                         clause_b.add_from_clause(encode_neq(&self.y_vars[t as usize], k));
@@ -132,7 +154,7 @@ impl BMCEncoder {
                         clause_b.add_literal(-self.edge_var(t, v, k));
                         clause_b.add_literal(-self.edge_var(t+1, u, v));
                         clause_b.add_literal(-self.edge_var(t, u, v));
-                        res.add_clause(clause_b);
+                        cnf.add_clause(clause_b);
 
                         let mut clause_c = Clause::new();
                         clause_c.add_from_clause(encode_neq(&self.y_vars[t as usize], k));
@@ -140,7 +162,7 @@ impl BMCEncoder {
                         clause_c.add_literal(self.edge_var(t, u, k));
                         clause_c.add_literal(self.edge_var(t+1, u, v));
                         clause_c.add_literal(-self.edge_var(t, u, v));
-                        res.add_clause(clause_c);
+                        cnf.add_clause(clause_c);
 
                         let mut clause_d = Clause::new();
                         clause_d.add_from_clause(encode_neq(&self.y_vars[t as usize], k));
@@ -148,7 +170,7 @@ impl BMCEncoder {
                         clause_d.add_literal(self.edge_var(t, v, k));
                         clause_d.add_literal(self.edge_var(t+1, u, v));
                         clause_d.add_literal(-self.edge_var(t, u, v));
-                        res.add_clause(clause_d);
+                        cnf.add_clause(clause_d);
 
                         let mut clause_e = Clause::new();
                         clause_e.add_from_clause(encode_neq(&self.y_vars[t as usize], k));
@@ -156,7 +178,7 @@ impl BMCEncoder {
                         clause_e.add_literal(self.edge_var(t, u, k));
                         clause_e.add_literal(-self.edge_var(t+1, u,v));
                         clause_e.add_literal(self.edge_var(t, u, v));
-                        res.add_clause(clause_e);
+                        cnf.add_clause(clause_e);
 
                         let mut clause_f = Clause::new();
                         clause_f.add_from_clause(encode_neq(&self.y_vars[t as usize], k));
@@ -164,7 +186,7 @@ impl BMCEncoder {
                         clause_f.add_literal(self.edge_var(t, v, k));
                         clause_f.add_literal(-self.edge_var(t+1, u, v));
                         clause_f.add_literal(self.edge_var(t, u, v));
-                        res.add_clause(clause_f);
+                        cnf.add_clause(clause_f);
                     }
                     else {
                         let mut clause_a = Clause::new();
@@ -172,20 +194,23 @@ impl BMCEncoder {
                         clause_a.add_from_clause(encode_neq(&self.z_vars[t as usize], GSOps::LC as u32));
                         clause_a.add_literal(self.edge_var(t+1, u, v));
                         clause_a.add_literal(-self.edge_var(t, u, v));
-                        res.add_clause(clause_a);
+                        cnf.add_clause(clause_a);
 
                         let mut clause_b = Clause::new();
                         clause_b.add_from_clause(encode_neq(&self.y_vars[t as usize], k));
                         clause_b.add_from_clause(encode_neq(&self.z_vars[t as usize], GSOps::LC as u32));
                         clause_b.add_literal(-self.edge_var(t+1, u, v));
                         clause_b.add_literal(self.edge_var(t, u, v));
-                        res.add_clause(clause_b);
+                        cnf.add_clause(clause_b);
                     }
                 }
             }
         }
+    }
 
-        // forall k : (y = k  ^ z = GSOps::VD) --> VD(k)
+
+    fn encode_vds(&self, t: u32, cnf: &mut CNF) {
+        // forall k : (y = k ^ z = GSOps::VD) --> VD(k)
         // (see Eqs. (5, 15) in https://arxiv.org/pdf/2309.03593)
         for k in 0..self.n {
             for u in 0..self.n {
@@ -195,7 +220,7 @@ impl BMCEncoder {
                         clause_a.add_from_clause(encode_neq(&self.y_vars[t as usize], k));
                         clause_a.add_from_clause(encode_neq(&self.z_vars[t as usize], GSOps::VD as u32));
                         clause_a.add_literal(-self.edge_var(t+1, u, v));
-                        res.add_clause(clause_a);
+                        cnf.add_clause(clause_a);
                     }
                     else {
                         let mut clause_a = Clause::new();
@@ -203,20 +228,23 @@ impl BMCEncoder {
                         clause_a.add_from_clause(encode_neq(&self.z_vars[t as usize], GSOps::VD as u32));
                         clause_a.add_literal(self.edge_var(t+1, u, v));
                         clause_a.add_literal(-self.edge_var(t, u, v));
-                        res.add_clause(clause_a);
+                        cnf.add_clause(clause_a);
 
                         let mut clause_b = Clause::new();
                         clause_b.add_from_clause(encode_neq(&self.y_vars[t as usize], k));
                         clause_b.add_from_clause(encode_neq(&self.z_vars[t as usize], GSOps::VD as u32));
                         clause_b.add_literal(-self.edge_var(t+1, u, v));
                         clause_b.add_literal(self.edge_var(t, u, v));
-                        res.add_clause(clause_b);
+                        cnf.add_clause(clause_b);
                     }
                 }
             }
         }
+    }
 
-        // forall (u,v)_k \in allowed_EF : (w? = k  ^ z = GSOps::EF) --> EF_i(u,v)
+
+    fn encode_efs(&self, t: u32, cnf: &mut CNF) {
+        // forall (u,v)_k \in allowed_EF : (w = k  ^ z = GSOps::EF) --> EF_i(u,v)
         // (see Eqs. (6, 16) in https://arxiv.org/pdf/2309.03593)
         for (i, (u_i, v_i)) in self.allowed_efs.iter().enumerate() {
             let mut clause_a = Clause::new();
@@ -224,14 +252,14 @@ impl BMCEncoder {
             clause_a.add_from_clause(encode_neq(&self.z_vars[t as usize], GSOps::EF as u32));
             clause_a.add_literal(self.edge_var(t, *u_i, *v_i));
             clause_a.add_literal(self.edge_var(t+1, *u_i, *v_i));
-            res.add_clause(clause_a);
+            cnf.add_clause(clause_a);
 
             let mut clause_b = Clause::new();
             clause_b.add_from_clause(encode_neq(&self.w_vars[t as usize], i as u32));
             clause_b.add_from_clause(encode_neq(&self.z_vars[t as usize], GSOps::EF as u32));
             clause_b.add_literal(-self.edge_var(t, *u_i, *v_i));
             clause_b.add_literal(-self.edge_var(t+1, *u_i, *v_i));
-            res.add_clause(clause_b);
+            cnf.add_clause(clause_b);
 
             for u in 0..self.n {
                 for v in u+1..self.n {
@@ -242,19 +270,22 @@ impl BMCEncoder {
                         clause_a.add_from_clause(encode_neq(&self.z_vars[t as usize], GSOps::EF as u32));
                         clause_a.add_literal(self.edge_var(t+1, u, v));
                         clause_a.add_literal(-self.edge_var(t, u, v));
-                        res.add_clause(clause_a);
+                        cnf.add_clause(clause_a);
 
                         let mut clause_b = Clause::new();
                         clause_b.add_from_clause(encode_neq(&self.w_vars[t as usize], i as u32));
                         clause_b.add_from_clause(encode_neq(&self.z_vars[t as usize], GSOps::EF as u32));
                         clause_b.add_literal(-self.edge_var(t+1, u, v));
                         clause_b.add_literal(self.edge_var(t, u, v));
-                        res.add_clause(clause_b);
+                        cnf.add_clause(clause_b);
                     }
                 }
             }
         }
+    }
 
+
+    fn encode_id(&self, t: u32, cnf: &mut CNF) {
         // (z == GSOps::Id) --> Id
         // (see Eq. (17, 18) in https://arxiv.org/pdf/2309.03593)
         for u in 0..self.n {
@@ -262,32 +293,14 @@ impl BMCEncoder {
                 let mut clause_a = encode_neq(&self.z_vars[t as usize], GSOps::Id as u32);
                 clause_a.add_literal(self.edge_var(t+1, u, v));
                 clause_a.add_literal(-self.edge_var(t, u, v));
-                res.add_clause(clause_a);
+                cnf.add_clause(clause_a);
 
                 let mut clause_b = encode_neq(&self.z_vars[t as usize], GSOps::Id as u32);
                 clause_b.add_literal(-self.edge_var(t+1, u, v));
                 clause_b.add_literal(self.edge_var(t, u, v));
-                res.add_clause(clause_b);
+                cnf.add_clause(clause_b);
             }
         }
-
-        // \vec y <= |V| - 1
-        res.add_clauses(encode_leq(&self.y_vars[t as usize], self.n - 1));
-
-        // \vec z < |ops| - 1
-        res.add_clauses(encode_leq(&self.z_vars[t as usize], GSOps::NumOps as u32 - 1));
-
-        // If no EF, \vec z != GSOps::EF
-        if self.allowed_efs.len() == 0 {
-            res.add_clause(encode_neq(&self.z_vars[t as usize], GSOps::EF as u32));
-        }
-
-        // If EFs, \vec ef <= |allowed_ef| - 1
-        if self.allowed_efs.len() > 0 {
-            res.add_clauses(encode_leq(&self.w_vars[t as usize], self.allowed_efs.len() as u32 - 1));
-        }
-
-        res
     }
 
 
