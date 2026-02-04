@@ -33,6 +33,23 @@ class Graph:
         return min(e1) == min(e2) and max(e1) == max(e2)
 
     @staticmethod
+    def max_orbit_diameter(n: int):
+        """
+        Get the maximum orbit diameter of an `n` node graph.
+        """
+        if n <= 2:
+            return 0
+        if n == 3:
+            return 1
+            # TODO: maybe this can be extended e.g. https://arxiv.org/pdf/1910.03969
+            # (although Table 2 seems to be about unlabled graph orbits (C_i)
+            # rather than labled graph orbits (L_i)).
+        else:
+            # see https://arxiv.org/pdf/2309.03593 Sec. 3.1
+            return int(3*(n - (n % 2))/2)
+
+
+    @staticmethod
     def from_tgf(filepath: str):
         """
         Load a graph from a .tgf file.
