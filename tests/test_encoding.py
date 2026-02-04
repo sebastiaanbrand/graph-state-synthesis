@@ -462,3 +462,45 @@ def test_form_constraint1():
     assert sequence[2].startswith('EF')
     assert sequence[3].startswith('EF')
     assert sequence[4].startswith('LC')
+
+
+def test_form_constraint2():
+    """
+    Test graph from Fig.2 from https://arxiv.org/pdf/2402.05874.
+                         0
+                         |
+                         1
+                       /   \
+                      3 --- 4
+                     /       \
+                    2         5
+    """
+    nqubits = 6
+    ef = encoder.op_id('EF')
+    lc = encoder.op_id('LC')
+    allowed_efs = list(Graph.all_possible_edges(nqubits))
+    form = [ef, ef, lc, ef, ef, ef] # search for solution of this form
+    steps = len(form)
+
+    source = GraphFactory.get_empty_graph(nqubits)
+    target = GraphFactory.get_empty_graph(nqubits)
+    target.set_edge(0, 1, True)
+    target.set_edge(1, 3, True)
+    target.set_edge(1, 4, True)
+    target.set_edge(3, 4, True)
+    target.set_edge(2, 3, True)
+    target.set_edge(4, 5, True)
+
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps, allowed_efs=allowed_efs, form=form)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+    sequence = encoder.decode_model(s.model, nqubits, steps, allowed_efs=allowed_efs)
+
+    assert is_sat
+    assert len(sequence) == 6
+    assert sequence[0] in ['EF(1,3)', 'EF(1,4)', 'EF(3,4)']
+    assert sequence[1] in ['EF(1,3)', 'EF(1,4)', 'EF(3,4)']
+    assert sequence[2] in ['LC(1)', 'LC(3)', 'LC(4)']
+    assert sequence[3] in ['EF(0,1)', 'EF(2,3)', 'EF(4,5)']
+    assert sequence[4] in ['EF(0,1)', 'EF(2,3)', 'EF(4,5)']
+    assert sequence[5] in ['EF(0,1)', 'EF(2,3)', 'EF(4,5)']
