@@ -3,7 +3,7 @@ Some test cases to check if the Kissat wrapper is working correctly.
 """
 import gs_bmc_encoder as encoder
 from kissat_wrapper import Kissat
-from graph_states import GraphFactory
+from graph_states import Graph, GraphFactory
 
 
 def test_lc1():
@@ -241,6 +241,30 @@ def test_ef2():
     assert is_sat
     assert len(sequence) == steps
     assert sequence[0] == 'EF(0,1)'
+
+
+def test_ef3():
+    """
+    Allow EF between any pair of nodes.
+    """
+    steps = 4
+    nqubits = 5
+    allowed_efs = list(Graph.all_possible_edges(nqubits))
+
+    source = GraphFactory.get_empty_graph(nqubits)
+    target = GraphFactory.get_star_graph(nqubits, center=3)
+
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps, allowed_efs=allowed_efs)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+    sequence = encoder.decode_model(s.model, nqubits, steps, allowed_efs=allowed_efs)
+
+    assert is_sat
+    assert len(sequence) == 4
+    assert 'EF(0,3)' in sequence
+    assert 'EF(1,3)' in sequence
+    assert 'EF(2,3)' in sequence
+    assert 'EF(3,4)' in sequence
 
 
 def test_ef_lc1():

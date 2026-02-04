@@ -331,6 +331,9 @@ impl BMCEncoder {
         let mut assignments = vec!['*';(self.nvars+1) as usize];
         for lit in &model {
             let var = (i32::abs(*lit)) as usize;
+            if var > self.nvars as usize {
+                panic!("Decoding error: model_var > encoding_var. Maybe forgot allowed_efs?")
+            }
             if lit > &0 {
                 assignments[var] = '1';
             }
