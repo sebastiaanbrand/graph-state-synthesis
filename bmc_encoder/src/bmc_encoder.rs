@@ -7,7 +7,8 @@ pub enum GSOps {
     VD,
     EF,
     Id,
-    NumOps // sorry
+    NumOps, // number of operation IDs (used to determine size of `z_vars`)
+    AnyOp   // can be used to specify BMC `form` in `encode_bmc_with_form()`
 }
 
 
@@ -79,12 +80,19 @@ impl BMCEncoder {
 
 
     pub fn encode_bmc(&self, source: &Graph, target: &Graph, depth: u32) -> CNF {
+        let form = vec![GSOps::AnyOp as u32; depth as usize];
+        let cnf = self.encode_bmc_with_form(source, target, form);
+        cnf
+    }
+
+
+    pub fn encode_bmc_with_form(&self, source: &Graph, target: &Graph, form: Vec<u32>) -> CNF {
         let mut cnf = CNF::new();
         self.encode_graph(source, 0, &mut cnf);
-        for t in 0..depth {
-            self.encode_transition(t, &mut cnf);
+        for (t, op) in form.iter().enumerate() {
+            self.encode_transition(t as u32, *op, &mut cnf);
         }
-        self.encode_graph(target, depth, &mut cnf);
+        self.encode_graph(target, form.len() as u32, &mut cnf);
         cnf
     }
 
@@ -104,12 +112,34 @@ impl BMCEncoder {
     }
 
 
-    fn encode_transition(&self, t: u32, cnf: &mut CNF) {
+    fn encode_transition(&self, t: u32, allowed_op: u32, cnf: &mut CNF) {
 
-        // add transitions
-        self.encode_lcs(t, cnf);
-        self.encode_vds(t, cnf);
-        self.encode_efs(t, cnf);
+        if allowed_op == GSOps::AnyOp as u32 {
+            //operation at timestep t can be LC/VD/EF
+            self.encode_lcs(t, cnf);
+            self.encode_vds(t, cnf);
+            self.encode_efs(t, cnf);
+        }
+        else if allowed_op == GSOps::LC as u32 {
+            // operation at timestep t must be an LC
+            self.encode_lcs(t, cnf);
+            cnf.add_clauses(encode_eq(&self.z_vars[t as usize], GSOps::LC as u32))
+        }
+        else if allowed_op == GSOps::VD as u32 {
+            // operation at timestep t must be a VD
+            self.encode_vds(t, cnf);
+            cnf.add_clauses(encode_eq(&self.z_vars[t as usize], GSOps::VD as u32))
+        }
+        else if allowed_op == GSOps::EF as u32 {
+            // operation at timestep t must be an EF
+            self.encode_efs(t, cnf);
+            cnf.add_clauses(encode_eq(&self.z_vars[t as usize], GSOps::EF as u32))
+        }
+        else {
+            panic!("Invalid OpID passed to BMC 'form'");
+        }
+
+        // allow 'do nothing' (identity) at any timestep (TODO: maybe don't?)
         self.encode_id(t, cnf);
 
         // \vec y <= |V| - 1

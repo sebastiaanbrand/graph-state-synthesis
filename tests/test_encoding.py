@@ -434,3 +434,31 @@ def test_unsat4():
     is_sat = s.solve()
 
     assert not is_sat
+
+
+def test_form_constraint1():
+    """
+    Test constraining the form of the solution.
+    """
+    nqubits = 5
+    ef = encoder.op_id('EF')
+    lc = encoder.op_id('LC')
+    allowed_efs = list(Graph.all_possible_edges(nqubits))
+    form = [ef, ef, ef, ef, lc] # search for solution of this form
+    steps = len(form)
+
+    source = GraphFactory.get_empty_graph(nqubits)
+    target = GraphFactory.get_complete_graph(nqubits)
+
+    dimacs = encoder.encode_bmc(source.to_tgf(), target.to_tgf(), nqubits, steps, allowed_efs=allowed_efs, form=form)
+    s = Kissat(dimacs)
+    is_sat = s.solve()
+    sequence = encoder.decode_model(s.model, nqubits, steps, allowed_efs=allowed_efs)
+
+    assert is_sat
+    assert len(sequence) == 5
+    assert sequence[0].startswith('EF')
+    assert sequence[1].startswith('EF')
+    assert sequence[2].startswith('EF')
+    assert sequence[3].startswith('EF')
+    assert sequence[4].startswith('LC')
