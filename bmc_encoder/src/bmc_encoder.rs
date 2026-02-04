@@ -121,25 +121,33 @@ impl BMCEncoder {
             self.encode_efs(t, cnf);
         }
         else if allowed_op == GSOps::LC as u32 {
-            // operation at timestep t must be an LC
+            // operation at timestep t must be an LC (or identity)
             self.encode_lcs(t, cnf);
-            cnf.add_clauses(encode_eq(&self.z_vars[t as usize], GSOps::LC as u32))
+            // TODO: maybe there's a better way to encode this?
+            cnf.add_clause(encode_neq(&self.z_vars[t as usize], GSOps::VD as u32));
+            cnf.add_clause(encode_neq(&self.z_vars[t as usize], GSOps::EF as u32));
         }
         else if allowed_op == GSOps::VD as u32 {
-            // operation at timestep t must be a VD
+            // operation at timestep t must be a VD (or identity)
             self.encode_vds(t, cnf);
-            cnf.add_clauses(encode_eq(&self.z_vars[t as usize], GSOps::VD as u32))
+            self.encode_id(t, cnf);
+            // TODO: maybe there's a better way to encode this?
+            cnf.add_clause(encode_neq(&self.z_vars[t as usize], GSOps::LC as u32));
+            cnf.add_clause(encode_neq(&self.z_vars[t as usize], GSOps::EF as u32));
         }
         else if allowed_op == GSOps::EF as u32 {
-            // operation at timestep t must be an EF
+            // operation at timestep t must be an EF (or identity)
             self.encode_efs(t, cnf);
-            cnf.add_clauses(encode_eq(&self.z_vars[t as usize], GSOps::EF as u32))
+            self.encode_id(t, cnf);
+            // TODO: maybe there's a better way to encode this?
+            cnf.add_clause(encode_neq(&self.z_vars[t as usize], GSOps::LC as u32));
+            cnf.add_clause(encode_neq(&self.z_vars[t as usize], GSOps::VD as u32));
         }
         else {
             panic!("Invalid OpID passed to BMC 'form'");
         }
 
-        // allow 'do nothing' (identity) at any timestep (TODO: maybe don't?)
+        // allow identity (do nothing) at any timestep (TODO: maybe don't?)
         self.encode_id(t, cnf);
 
         // \vec y <= |V| - 1

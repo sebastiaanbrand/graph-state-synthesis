@@ -134,7 +134,7 @@ pub fn encode_eq(vars: &Vec<u32>, value: u32) -> CNF {
     clauses
 }
 
-/// Returns a clause which encodes vars != value.
+/// Returns a clause that encodes vars != value.
 /// (see Eq. (12) in https://arxiv.org/pdf/2309.03593)
 pub fn encode_neq(vars: &Vec<u32>, value: u32) -> Clause {
     let mut clause = Clause::new();
